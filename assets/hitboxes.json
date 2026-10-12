@@ -1,0 +1,3059 @@
+{
+  "_units": "1x pixels, relative to each sprite's own top-left; multiply by draw scale",
+  "ghost": {
+    "type": "circle",
+    "cx": 32,
+    "cy": 33,
+    "r": 18,
+    "note": "same for all ghost frames, normal and golden; ignore the 1px idle bob"
+  },
+  "tomb-a-body": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        64
+      ]
+    ]
+  },
+  "tomb-b-body": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        64
+      ]
+    ]
+  },
+  "tomb-c-body": {
+    "rects": [
+      [
+        9,
+        0,
+        62,
+        64
+      ]
+    ]
+  },
+  "tomb-a-cap-top": {
+    "rects": [
+      [
+        8,
+        40,
+        64,
+        40
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        40,
+        30
+      ]
+    ]
+  },
+  "tomb-a-cap-bottom": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        40
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        40,
+        30
+      ]
+    ]
+  },
+  "tomb-b-cap-top": {
+    "rects": [
+      [
+        5,
+        45,
+        70,
+        35
+      ],
+      [
+        35,
+        5,
+        10,
+        40
+      ],
+      [
+        23,
+        13,
+        34,
+        8
+      ]
+    ]
+  },
+  "tomb-b-cap-bottom": {
+    "rects": [
+      [
+        5,
+        0,
+        70,
+        35
+      ],
+      [
+        35,
+        35,
+        10,
+        40
+      ],
+      [
+        23,
+        59,
+        34,
+        8
+      ]
+    ]
+  },
+  "tomb-c-cap-top": {
+    "rects": [
+      [
+        8,
+        31,
+        64,
+        49
+      ]
+    ]
+  },
+  "tomb-c-cap-bottom": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        49
+      ]
+    ]
+  },
+  "obs-common-coffin-body": {
+    "rects": [
+      [
+        13,
+        0,
+        54,
+        64
+      ]
+    ]
+  },
+  "obs-common-coffin-cap-top": {
+    "rects": [
+      [
+        13,
+        32,
+        54,
+        48
+      ],
+      [
+        19,
+        10,
+        42,
+        22
+      ]
+    ]
+  },
+  "obs-common-coffin-cap-bottom": {
+    "rects": [
+      [
+        13,
+        0,
+        54,
+        48
+      ],
+      [
+        19,
+        48,
+        42,
+        22
+      ]
+    ]
+  },
+  "obs-common-cross-body": {
+    "rects": [
+      [
+        21,
+        0,
+        38,
+        64
+      ]
+    ]
+  },
+  "obs-common-cross-cap-top": {
+    "rects": [
+      [
+        21,
+        7,
+        38,
+        73
+      ],
+      [
+        7,
+        23,
+        66,
+        18
+      ]
+    ]
+  },
+  "obs-common-cross-cap-bottom": {
+    "rects": [
+      [
+        21,
+        0,
+        38,
+        73
+      ],
+      [
+        7,
+        39,
+        66,
+        18
+      ]
+    ]
+  },
+  "obs-space-moonrock-body": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        64
+      ]
+    ]
+  },
+  "obs-space-moonrock-cap-top": {
+    "rects": [
+      [
+        8,
+        36,
+        64,
+        44
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        36,
+        24
+      ]
+    ]
+  },
+  "obs-space-moonrock-cap-bottom": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        44
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        44,
+        24
+      ]
+    ]
+  },
+  "columns": {
+    "_note": "Bottom/top column sets. gapEdge = hitbox edge nearest the gap (sprite y). pumpkinSeat = where the pumpkin's bottom-centre rests on a cap-top (sprite x,y).",
+    "tomb-a": {
+      "files": "tomb-a-{body,cap-top,cap-bottom}",
+      "floorEdge": 10,
+      "ceilEdge": 70,
+      "pumpkinSeat": [
+        40,
+        8
+      ]
+    },
+    "tomb-b": {
+      "files": "tomb-b-{body,cap-top,cap-bottom}",
+      "floorEdge": 5,
+      "ceilEdge": 75,
+      "pumpkinSeat": [
+        40,
+        3
+      ]
+    },
+    "tomb-c": {
+      "files": "tomb-c-{body,cap-top,cap-bottom}",
+      "floorEdge": 31,
+      "ceilEdge": 49,
+      "pumpkinSeat": [
+        40,
+        25
+      ]
+    },
+    "coffin": {
+      "files": "obs-common-coffin-{body,cap-top,cap-bottom}",
+      "floorEdge": 10,
+      "ceilEdge": 70,
+      "pumpkinSeat": [
+        40,
+        7
+      ]
+    },
+    "cross": {
+      "files": "obs-common-cross-{body,cap-top,cap-bottom}",
+      "floorEdge": 7,
+      "ceilEdge": 73,
+      "pumpkinSeat": [
+        40,
+        5
+      ]
+    },
+    "moonrock": {
+      "files": "obs-space-moonrock-{body,cap-top,cap-bottom}",
+      "floorEdge": 12,
+      "ceilEdge": 68,
+      "pumpkinSeat": [
+        40,
+        11
+      ]
+    },
+    "obs-church-spire": {
+      "files": "obs-church-spire-{body,cap-top,cap-bottom}",
+      "floorEdge": 12,
+      "ceilEdge": 68,
+      "pumpkinSeat": [
+        40,
+        3
+      ]
+    },
+    "obs-church-bell": {
+      "files": "obs-church-bell-{body,cap-top,cap-bottom}",
+      "floorEdge": 10,
+      "ceilEdge": 76,
+      "pumpkinSeat": [
+        40,
+        7
+      ]
+    },
+    "obs-countryside-branch": {
+      "files": "obs-countryside-branch-{body,cap-top,cap-bottom}",
+      "floorEdge": 4,
+      "ceilEdge": 76,
+      "pumpkinSeat": [
+        40,
+        6
+      ]
+    },
+    "obs-countryside-scarecrow": {
+      "files": "obs-countryside-scarecrow-{body,cap-top,cap-bottom}",
+      "floorEdge": 10,
+      "ceilEdge": 74,
+      "pumpkinSeat": [
+        40,
+        2
+      ]
+    },
+    "obs-school-chimney": {
+      "files": "obs-school-chimney-{body,cap-top,cap-bottom}",
+      "floorEdge": 5,
+      "ceilEdge": 75,
+      "pumpkinSeat": [
+        40,
+        3
+      ]
+    },
+    "obs-school-clocktower": {
+      "files": "obs-school-clocktower-{body,cap-top,cap-bottom}",
+      "floorEdge": 9,
+      "ceilEdge": 69,
+      "pumpkinSeat": [
+        40,
+        3
+      ]
+    },
+    "obs-city-skyscraper": {
+      "files": "obs-city-skyscraper-{body,cap-top,cap-bottom}",
+      "floorEdge": 23,
+      "ceilEdge": 57,
+      "pumpkinSeat": [
+        40,
+        21
+      ]
+    },
+    "obs-city-cranehook": {
+      "files": "obs-city-cranehook-{body,cap-top,cap-bottom}",
+      "floorEdge": 23,
+      "ceilEdge": 68,
+      "pumpkinSeat": [
+        40,
+        21
+      ]
+    },
+    "obs-space-satellite": {
+      "files": "obs-space-satellite-{body,cap-top,cap-bottom}",
+      "floorEdge": 13,
+      "ceilEdge": 67,
+      "pumpkinSeat": [
+        40,
+        8
+      ]
+    },
+    "obs-space-ufo": {
+      "files": "obs-space-ufo-{body,cap-top,cap-bottom}",
+      "floorEdge": 17,
+      "ceilEdge": 66,
+      "pumpkinSeat": [
+        40,
+        15
+      ]
+    },
+    "asteroid": {
+      "aliasOf": "moonrock",
+      "files": "obs-space-moonrock-{body,cap-top,cap-bottom}",
+      "floorEdge": 12,
+      "ceilEdge": 68,
+      "pumpkinSeat": [
+        40,
+        11
+      ],
+      "note": "space bottom column 'asteroid' = the moon-rock pillar art"
+    },
+    "_space": {
+      "top": {
+        "obs-space-satellite": 2,
+        "obs-space-ufo": 1
+      },
+      "bottom": {
+        "asteroid": 2,
+        "tomb-a": 1
+      },
+      "note": "tomb-a in space uses the normal tomb-a files; Code may add a soft shadow/glow under it so it reads as floating"
+    },
+    "_stageTops": {
+      "church-spire": "obs-church-spire",
+      "bell": "obs-church-bell",
+      "tree-branch": "obs-countryside-branch",
+      "scarecrow": "obs-countryside-scarecrow",
+      "school-chimney": "obs-school-chimney",
+      "clock-tower": "obs-school-clocktower",
+      "skyscraper": "obs-city-skyscraper",
+      "crane-hook": "obs-city-cranehook",
+      "satellite": "obs-space-satellite",
+      "ufo": "obs-space-ufo",
+      "note": "Tuning placeholder id -> art set"
+    },
+    "obs-graveyard-lantern-branch": {
+      "files": "obs-graveyard-lantern-branch-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 71,
+      "note": "static (no sway); twigs, glow and the little finial under the lantern are decorative"
+    },
+    "obs-graveyard-spider": {
+      "files": "obs-graveyard-spider-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 76,
+      "note": "cobweb counts (inner rects); spider legs, dew sparkles and the bow are decorative. Static"
+    },
+    "obs-church-chandelier": {
+      "files": "obs-church-chandelier-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 69,
+      "note": "static; candle flames and glow are decorative (they point up, away from the gap). Chain counted solid (link holes are far too small to pass)"
+    },
+    "obs-church-bats": {
+      "files": "obs-church-bats-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 57,
+      "note": "three sleeping bats (not the flapping hazard bat). Ear tips, leaves and z's are decorative. Static"
+    },
+    "obs-countryside-beehive": {
+      "files": "obs-countryside-beehive-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 66,
+      "note": "the two bees, leaves and the honey drip are decorative. Static"
+    },
+    "obs-countryside-swing": {
+      "files": "obs-countryside-swing-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 60,
+      "note": "body rect spans both ropes on purpose: the seat spans the full width, so nothing can ever pass between the ropes (same result as two rope rects). Rope knots under the seat are decorative. Static"
+    },
+    "obs-school-handbell": {
+      "files": "obs-school-handbell-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 74,
+      "note": "ding lines are decorative. Static (optional sway: rotate +-6 deg about (40,0) of the cap only if you also grow every rect by 4px sideways)"
+    },
+    "obs-school-kite": {
+      "files": "obs-school-kite-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 66,
+      "note": "the string tangle loop and the bow tail are decorative. Static"
+    },
+    "obs-school-lamp": {
+      "files": "obs-school-lamp-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 68,
+      "note": "the light cone is decorative. Static"
+    },
+    "obs-city-cradle": {
+      "files": "obs-city-cradle-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 66,
+      "note": "body rect spans both cables: the cradle below spans the full width, so the space between cables can never be reached (equivalent to two cable rects). Squeegee and suds bubbles are decorative. Static"
+    },
+    "obs-city-trafficlight": {
+      "files": "obs-city-trafficlight-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 71,
+      "note": "narrow (34 px housing): honest to the art and a bit forgiving, like the bell post. Static"
+    },
+    "obs-city-neonsign": {
+      "files": "obs-city-neonsign-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 65,
+      "note": "body rect spans both chains: the sign board spans the full width, so the space between chains can never be reached. Neon glow is decorative. Static"
+    },
+    "obs-space-arm": {
+      "files": "obs-space-arm-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 68,
+      "note": "claw tips past y 62 and the star's glow are decorative. Static"
+    },
+    "obs-space-astronaut": {
+      "files": "obs-space-astronaut-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 73,
+      "note": "antenna bobble and sparkles are decorative. Static (Code may bob the whole column 1-2 px; hitbox moves with it)"
+    },
+    "obs-church-ivystone": {
+      "files": "obs-church-ivystone-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 13,
+      "pumpkinSeat": [
+        40,
+        12
+      ],
+      "note": "warm sandstone (not the lilac graveyard stones). Ivy leaves and flowers are decorative"
+    },
+    "obs-church-font": {
+      "files": "obs-church-font-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 15,
+      "pumpkinSeat": [
+        40,
+        14
+      ],
+      "note": "pedestal is 36 px wide (honest, a bit forgiving between pairs). Water sparkles are decorative"
+    },
+    "obs-church-lychgate": {
+      "files": "obs-church-lychgate-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 17,
+      "pumpkinSeat": [
+        40,
+        13
+      ],
+      "note": "roof ridge knob, leaves and flower are decorative"
+    },
+    "obs-countryside-haybales": {
+      "files": "obs-countryside-haybales-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 18,
+      "pumpkinSeat": [
+        40,
+        16
+      ],
+      "note": "straw tufts, flower and leaf on top are decorative"
+    },
+    "obs-countryside-pumpkinstack": {
+      "files": "obs-countryside-pumpkinstack-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 9,
+      "pumpkinSeat": [
+        40,
+        6
+      ],
+      "note": "two cute pumpkins on a crate stack. Stems and the leaf are decorative"
+    },
+    "obs-countryside-churn": {
+      "files": "obs-countryside-churn-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 14,
+      "pumpkinSeat": [
+        40,
+        12
+      ],
+      "note": "the lid knob is decorative; side handles collide"
+    },
+    "obs-school-books": {
+      "files": "obs-school-books-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 10,
+      "pumpkinSeat": [
+        40,
+        9
+      ],
+      "note": "apple stem and leaf are decorative"
+    },
+    "obs-school-lockers": {
+      "files": "obs-school-lockers-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 10,
+      "pumpkinSeat": [
+        40,
+        8
+      ],
+      "note": "the backpack collides; its top handle is decorative"
+    },
+    "obs-school-globe": {
+      "files": "obs-school-globe-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 8,
+      "pumpkinSeat": [
+        40,
+        6
+      ],
+      "note": "the circle covers the globe; the thin brass ring rim (outer edge ~26) pokes ~2 px past it. Top knob is decorative. Stand pole is narrow (honest)"
+    },
+    "obs-city-postbox": {
+      "files": "obs-city-postbox-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 13,
+      "pumpkinSeat": [
+        40,
+        12
+      ],
+      "note": "top knob is decorative"
+    },
+    "obs-city-phonebox": {
+      "files": "obs-city-phonebox-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 9,
+      "pumpkinSeat": [
+        40,
+        8
+      ],
+      "note": "roof knob is decorative"
+    },
+    "obs-city-hydrant": {
+      "files": "obs-city-hydrant-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 10,
+      "pumpkinSeat": [
+        40,
+        9
+      ],
+      "note": "standpipe below is 30 px wide (honest, forgiving)"
+    },
+    "obs-space-crystals": {
+      "files": "obs-space-crystals-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 11,
+      "pumpkinSeat": [
+        40,
+        9
+      ],
+      "note": "three pastel crystal spires; the last ~4 px of each point, and the sparkles, are decorative"
+    },
+    "obs-space-alienplant": {
+      "files": "obs-space-alienplant-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 16,
+      "pumpkinSeat": [
+        40,
+        14
+      ],
+      "note": "petal tips, glowing antennae, stalk leaves and sparkles are decorative"
+    },
+    "_stageTopsV04": {
+      "graveyard": {
+        "obs-graveyard-lantern-branch": 2,
+        "obs-graveyard-spider": 2
+      },
+      "church": {
+        "obs-church-chandelier": 2,
+        "obs-church-bats": 1,
+        "obs-church-bell": 1
+      },
+      "countryside": {
+        "obs-countryside-beehive": 2,
+        "obs-countryside-branch": 2,
+        "obs-countryside-swing": 1
+      },
+      "schools": {
+        "obs-school-handbell": 2,
+        "obs-school-kite": 2,
+        "obs-school-lamp": 1
+      },
+      "city": {
+        "obs-city-cradle": 2,
+        "obs-city-trafficlight": 2,
+        "obs-city-neonsign": 1,
+        "obs-city-cranehook": 1
+      },
+      "space": {
+        "obs-space-satellite": 2,
+        "obs-space-arm": 1,
+        "obs-space-astronaut": 1,
+        "obs-space-ufo": 1
+      },
+      "note": "v0.4 per-stage TOP (ceiling) sets: art prefix -> suggested weight (Tuning owns weights). Tops use -body + -cap-bottom only."
+    },
+    "_stageBottomsV04": {
+      "graveyard": {
+        "tomb-a": 1,
+        "tomb-b": 1,
+        "tomb-c": 1,
+        "coffin": 1,
+        "cross": 1
+      },
+      "church": {
+        "obs-church-ivystone": 2,
+        "obs-church-font": 1,
+        "obs-church-lychgate": 1
+      },
+      "countryside": {
+        "obs-countryside-haybales": 2,
+        "obs-countryside-pumpkinstack": 1,
+        "obs-countryside-churn": 1
+      },
+      "schools": {
+        "obs-school-books": 2,
+        "obs-school-lockers": 2,
+        "obs-school-globe": 1
+      },
+      "city": {
+        "obs-city-postbox": 2,
+        "obs-city-phonebox": 1,
+        "obs-city-hydrant": 1
+      },
+      "space": {
+        "moonrock": 2,
+        "obs-space-crystals": 1,
+        "obs-space-alienplant": 1
+      },
+      "note": "v0.4 per-stage BOTTOM (floor) sets: column id -> suggested weight. Bottoms use -body + -cap-top only. tomb-a is dropped from space."
+    },
+    "_retiredTops": {
+      "tomb-a": "graveyard top",
+      "tomb-b": "graveyard top",
+      "tomb-c": "graveyard top",
+      "obs-church-spire": "church top",
+      "obs-countryside-scarecrow": "countryside top",
+      "obs-school-clocktower": "schools top",
+      "obs-school-chimney": "schools top",
+      "obs-city-skyscraper": "city top",
+      "note": "no longer used as TOP obstacles from v0.4 (files kept). Tombs/coffin/cross remain graveyard bottoms."
+    }
+  },
+  "hazards": {
+    "bat": {
+      "files": "obs-common-bat-flap-{0,1,2}",
+      "size": [
+        48,
+        48
+      ],
+      "type": "circle",
+      "cx": 24,
+      "cy": 25,
+      "r": 12
+    },
+    "pumpkin": {
+      "files": "obs-common-pumpkin",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 23,
+      "r": 14,
+      "restY": 38,
+      "note": "art bottom-centre is (20,38): draw at (seatX-20, capY+seatY-38). Rolling: rotate about (20,23), angle += dx/14.5 rad"
+    },
+    "skull": {
+      "files": "obs-common-skull-{0,1}",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 19,
+      "r": 13
+    },
+    "miniAsteroid": {
+      "files": "obs-space-miniasteroid",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 20,
+      "r": 13,
+      "note": "single sprite; spin by rotating about (20,20), ~90-120 deg/s"
+    },
+    "alien": {
+      "files": "obs-space-alien-{0,1}",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 22,
+      "r": 13,
+      "note": "frame 1 is drawn 1.5px higher (built-in bob); keep the circle at (20,22)"
+    }
+  },
+  "pickups": {
+    "golden-ghost": {
+      "files": "pickup-golden-ghost-{0,1,2}",
+      "size": [
+        56,
+        56
+      ],
+      "type": "circle",
+      "cx": 28,
+      "cy": 28,
+      "r": 16,
+      "placement": "gapCentre"
+    },
+    "sweet-wrapped": {
+      "files": "pickup-sweet-wrapped",
+      "size": [
+        32,
+        32
+      ],
+      "type": "circle",
+      "cx": 16,
+      "cy": 16,
+      "r": 10
+    },
+    "sweet-lollipop": {
+      "files": "pickup-sweet-lollipop",
+      "size": [
+        32,
+        32
+      ],
+      "type": "circle",
+      "cx": 16,
+      "cy": 13,
+      "r": 10
+    },
+    "sweet-macaron": {
+      "files": "pickup-sweet-macaron",
+      "size": [
+        32,
+        32
+      ],
+      "type": "circle",
+      "cx": 16,
+      "cy": 16,
+      "r": 10
+    },
+    "golden-ghost-space": {
+      "files": "pickup-golden-ghost-space-{0,1,2}",
+      "size": [
+        56,
+        56
+      ],
+      "type": "circle",
+      "cx": 28,
+      "cy": 28,
+      "r": 16,
+      "placement": "gapCentre",
+      "note": "brighter-glow variant for the space background"
+    }
+  },
+  "events": {
+    "graveyard-hearse": {
+      "files": "event-graveyard-hearse-{0,1}",
+      "size": [
+        160,
+        64
+      ],
+      "rects": [
+        [
+          8,
+          34,
+          30,
+          26
+        ],
+        [
+          38,
+          12,
+          116,
+          48
+        ]
+      ],
+      "anchor": "bottom of sprite (y=64) on the ground line",
+      "direction": "right-to-left",
+      "speed": 175
+    },
+    "church-batSwarm": {
+      "reuses": "hazards.bat"
+    },
+    "countryside-pumpkinRoll": {
+      "reuses": "hazards.pumpkin"
+    },
+    "schools-sweetShower": {
+      "reuses": [
+        "pickups.sweet-wrapped",
+        "pickups.sweet-lollipop",
+        "pickups.sweet-macaron"
+      ],
+      "hazard": false
+    },
+    "city-nightbus": {
+      "files": "event-city-nightbus-{0,1}",
+      "size": [
+        192,
+        72
+      ],
+      "rects": [
+        [
+          9,
+          8,
+          177,
+          58
+        ]
+      ],
+      "anchor": "bottom of sprite (y=72) on the ground line",
+      "direction": "right-to-left",
+      "speed": 160
+    },
+    "city-pigeon": {
+      "files": "event-city-pigeon-flap-{0,1,2}",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 22,
+      "r": 10
+    },
+    "warning": {
+      "files": "ui-event-warning-{0,1}",
+      "size": [
+        40,
+        40
+      ],
+      "hitbox": null
+    },
+    "space-meteor": {
+      "files": "event-space-meteor-{0,1}",
+      "size": [
+        72,
+        48
+      ],
+      "type": "circle",
+      "cx": 18,
+      "cy": 32,
+      "r": 12,
+      "direction": "from top-right toward bottom-left (trail points up-right)",
+      "note": "trail is decorative"
+    }
+  },
+  "ambient": {
+    "_note": "decorative only - NO hitboxes",
+    "files": [
+      "amb-graveyard-fog-back",
+      "amb-graveyard-fog-front",
+      "amb-church-bird-perch",
+      "amb-church-bird-fly-{0,1,2}",
+      "amb-school-bike-mint",
+      "amb-school-bike-pink",
+      "amb-city-rain-{0,1,2}",
+      "amb-space-star-{0,1,2}",
+      "amb-space-starfield"
+    ]
+  },
+  "obs-church-spire-body": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        64
+      ]
+    ]
+  },
+  "obs-church-spire-cap-top": {
+    "rects": [
+      [
+        8,
+        50,
+        64,
+        30
+      ],
+      [
+        22,
+        36,
+        36,
+        14
+      ],
+      [
+        31,
+        21,
+        18,
+        15
+      ],
+      [
+        37,
+        12,
+        6,
+        9
+      ]
+    ]
+  },
+  "obs-church-spire-cap-bottom": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        30
+      ],
+      [
+        22,
+        30,
+        36,
+        14
+      ],
+      [
+        31,
+        44,
+        18,
+        15
+      ],
+      [
+        37,
+        59,
+        6,
+        9
+      ]
+    ]
+  },
+  "obs-church-bell-body": {
+    "rects": [
+      [
+        23,
+        0,
+        34,
+        64
+      ]
+    ]
+  },
+  "obs-church-bell-cap-top": {
+    "rects": [
+      [
+        23,
+        56,
+        34,
+        24
+      ],
+      [
+        12,
+        34,
+        56,
+        22
+      ],
+      [
+        27,
+        20,
+        26,
+        14
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        22,
+        12
+      ]
+    ]
+  },
+  "obs-church-bell-cap-bottom": {
+    "rects": [
+      [
+        23,
+        0,
+        34,
+        18
+      ],
+      [
+        38,
+        17,
+        4,
+        6
+      ],
+      [
+        12,
+        46,
+        56,
+        22
+      ],
+      [
+        27,
+        32,
+        26,
+        14
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        34,
+        12
+      ],
+      [
+        40,
+        72,
+        4
+      ]
+    ]
+  },
+  "obs-countryside-branch-body": {
+    "rects": [
+      [
+        11,
+        0,
+        58,
+        64
+      ]
+    ]
+  },
+  "obs-countryside-branch-cap-top": {
+    "rects": [
+      [
+        11,
+        42,
+        58,
+        38
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        29,
+        25
+      ]
+    ]
+  },
+  "obs-countryside-branch-cap-bottom": {
+    "rects": [
+      [
+        11,
+        0,
+        58,
+        38
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        51,
+        25
+      ]
+    ]
+  },
+  "obs-countryside-scarecrow-body": {
+    "rects": [
+      [
+        29,
+        0,
+        22,
+        64
+      ]
+    ]
+  },
+  "obs-countryside-scarecrow-cap-top": {
+    "rects": [
+      [
+        8,
+        35,
+        64,
+        9
+      ],
+      [
+        28,
+        34,
+        24,
+        46
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        22,
+        12
+      ]
+    ]
+  },
+  "obs-countryside-scarecrow-cap-bottom": {
+    "rects": [
+      [
+        29,
+        0,
+        22,
+        20
+      ],
+      [
+        8,
+        41,
+        64,
+        9
+      ],
+      [
+        28,
+        40,
+        24,
+        26
+      ],
+      [
+        27,
+        66,
+        26,
+        8
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        28,
+        12
+      ]
+    ]
+  },
+  "obs-school-chimney-body": {
+    "rects": [
+      [
+        11,
+        0,
+        58,
+        64
+      ]
+    ]
+  },
+  "obs-school-chimney-cap-top": {
+    "rects": [
+      [
+        11,
+        24,
+        58,
+        56
+      ],
+      [
+        5,
+        14,
+        70,
+        10
+      ],
+      [
+        19,
+        5,
+        11,
+        9
+      ],
+      [
+        49,
+        5,
+        11,
+        9
+      ]
+    ]
+  },
+  "obs-school-chimney-cap-bottom": {
+    "rects": [
+      [
+        11,
+        0,
+        58,
+        56
+      ],
+      [
+        5,
+        56,
+        70,
+        10
+      ],
+      [
+        19,
+        66,
+        11,
+        9
+      ],
+      [
+        49,
+        66,
+        11,
+        9
+      ]
+    ]
+  },
+  "obs-school-clocktower-body": {
+    "rects": [
+      [
+        13,
+        0,
+        54,
+        64
+      ]
+    ]
+  },
+  "obs-school-clocktower-cap-top": {
+    "rects": [
+      [
+        9,
+        30,
+        62,
+        50
+      ],
+      [
+        21,
+        18,
+        38,
+        12
+      ],
+      [
+        33,
+        9,
+        14,
+        9
+      ]
+    ]
+  },
+  "obs-school-clocktower-cap-bottom": {
+    "rects": [
+      [
+        13,
+        0,
+        54,
+        10
+      ],
+      [
+        9,
+        8,
+        62,
+        52
+      ],
+      [
+        16,
+        60,
+        48,
+        9
+      ]
+    ]
+  },
+  "obs-city-skyscraper-body": {
+    "rects": [
+      [
+        9,
+        0,
+        62,
+        64
+      ]
+    ]
+  },
+  "obs-city-skyscraper-cap-top": {
+    "rects": [
+      [
+        9,
+        40,
+        62,
+        40
+      ],
+      [
+        19,
+        23,
+        42,
+        17
+      ]
+    ]
+  },
+  "obs-city-skyscraper-cap-bottom": {
+    "rects": [
+      [
+        9,
+        0,
+        62,
+        40
+      ],
+      [
+        19,
+        40,
+        42,
+        17
+      ]
+    ]
+  },
+  "obs-city-cranehook-body": {
+    "rects": [
+      [
+        17,
+        0,
+        46,
+        64
+      ]
+    ]
+  },
+  "obs-city-cranehook-cap-top": {
+    "rects": [
+      [
+        5,
+        23,
+        70,
+        7
+      ],
+      [
+        15,
+        30,
+        50,
+        50
+      ]
+    ]
+  },
+  "obs-city-cranehook-cap-bottom": {
+    "rects": [
+      [
+        17,
+        0,
+        46,
+        16
+      ],
+      [
+        36,
+        16,
+        8,
+        10
+      ],
+      [
+        26,
+        25,
+        28,
+        20
+      ],
+      [
+        29,
+        45,
+        13,
+        23
+      ]
+    ]
+  },
+  "obs-space-satellite-body": {
+    "rects": [
+      [
+        17,
+        0,
+        46,
+        64
+      ]
+    ]
+  },
+  "obs-space-satellite-cap-top": {
+    "rects": [
+      [
+        17,
+        74,
+        46,
+        6
+      ],
+      [
+        26,
+        38,
+        28,
+        40
+      ],
+      [
+        39,
+        29,
+        2,
+        10
+      ],
+      [
+        5,
+        49,
+        70,
+        16
+      ],
+      [
+        18,
+        13,
+        44,
+        17
+      ]
+    ]
+  },
+  "obs-space-satellite-cap-bottom": {
+    "rects": [
+      [
+        17,
+        0,
+        46,
+        6
+      ],
+      [
+        26,
+        2,
+        28,
+        40
+      ],
+      [
+        39,
+        41,
+        2,
+        10
+      ],
+      [
+        5,
+        15,
+        70,
+        16
+      ],
+      [
+        18,
+        50,
+        44,
+        17
+      ]
+    ]
+  },
+  "obs-space-ufo-body": {
+    "rects": [
+      [
+        26,
+        0,
+        28,
+        64
+      ]
+    ]
+  },
+  "obs-space-ufo-cap-top": {
+    "rects": [
+      [
+        26,
+        52,
+        28,
+        28
+      ],
+      [
+        32,
+        45,
+        16,
+        8
+      ],
+      [
+        7,
+        32,
+        66,
+        14
+      ],
+      [
+        24,
+        17,
+        32,
+        15
+      ]
+    ]
+  },
+  "obs-space-ufo-cap-bottom": {
+    "rects": [
+      [
+        26,
+        0,
+        28,
+        30
+      ],
+      [
+        7,
+        44,
+        66,
+        14
+      ],
+      [
+        24,
+        29,
+        32,
+        15
+      ],
+      [
+        28,
+        58,
+        24,
+        8
+      ]
+    ]
+  },
+  "cutscene": {
+    "_note": "rocket launch: decorative only, NO hitboxes (collisions are off for the 2.5 s cutscene)",
+    "files": [
+      "prop-city-launchpad",
+      "cut-rocket-idle-{0,1}",
+      "cut-rocket-thrust-{0,1}",
+      "cut-rocket-flame-{0,1,2}",
+      "cut-smoke-puff-{0,1,2}",
+      "cut-cloud-{a,b,c}",
+      "bg-launch-sky"
+    ],
+    "anchors": {
+      "rocketNozzleBottomCentre": [
+        48,
+        144
+      ],
+      "flameTopCentre": [
+        24,
+        0
+      ],
+      "rocketFinBase_y": 140,
+      "launchpadTop": [
+        70,
+        112
+      ]
+    }
+  },
+  "backgrounds": {
+    "_note": "decorative only - NO hitboxes. 720x640 world px tiles, scroll horizontally",
+    "stages": [
+      "graveyard",
+      "church",
+      "countryside",
+      "schools",
+      "city",
+      "space"
+    ],
+    "layers": [
+      "far",
+      "mid",
+      "near"
+    ],
+    "scroll": {
+      "far": 0.1,
+      "mid": 0.3,
+      "near": 0.6,
+      "space": {
+        "far": 0.05,
+        "mid": 0.15,
+        "near": 0.5
+      }
+    },
+    "transitions": [
+      "bg-trans-graveyard-church-*",
+      "bg-trans-church-countryside-*",
+      "bg-trans-countryside-schools-*",
+      "bg-trans-schools-city-*"
+    ]
+  },
+  "obs-graveyard-lantern-branch-body": {
+    "rects": [
+      [
+        31,
+        0,
+        18,
+        64
+      ]
+    ]
+  },
+  "obs-graveyard-lantern-branch-cap-bottom": {
+    "rects": [
+      [
+        31,
+        0,
+        18,
+        8
+      ],
+      [
+        33,
+        8,
+        14,
+        6
+      ],
+      [
+        37,
+        14,
+        6,
+        9
+      ],
+      [
+        35,
+        23,
+        10,
+        4
+      ],
+      [
+        30,
+        26,
+        20,
+        4
+      ],
+      [
+        25,
+        30,
+        30,
+        4
+      ],
+      [
+        21,
+        34,
+        38,
+        2
+      ],
+      [
+        16,
+        35,
+        48,
+        5
+      ],
+      [
+        21,
+        40,
+        38,
+        26
+      ],
+      [
+        17,
+        66,
+        46,
+        5
+      ]
+    ]
+  },
+  "obs-graveyard-spider-body": {
+    "rects": [
+      [
+        39,
+        0,
+        2,
+        64
+      ]
+    ]
+  },
+  "obs-graveyard-spider-cap-bottom": {
+    "rects": [
+      [
+        39,
+        0,
+        2,
+        14
+      ],
+      [
+        16,
+        19,
+        48,
+        18
+      ],
+      [
+        24,
+        13,
+        32,
+        6
+      ],
+      [
+        24,
+        37,
+        32,
+        5
+      ],
+      [
+        39,
+        42,
+        2,
+        11
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        64,
+        12
+      ]
+    ]
+  },
+  "obs-church-chandelier-body": {
+    "rects": [
+      [
+        37,
+        0,
+        6,
+        64
+      ]
+    ]
+  },
+  "obs-church-chandelier-cap-bottom": {
+    "rects": [
+      [
+        37,
+        0,
+        6,
+        33
+      ],
+      [
+        34,
+        33,
+        12,
+        3
+      ],
+      [
+        30,
+        36,
+        20,
+        16
+      ],
+      [
+        9,
+        29,
+        6,
+        13
+      ],
+      [
+        24,
+        34,
+        6,
+        13
+      ],
+      [
+        50,
+        34,
+        6,
+        13
+      ],
+      [
+        65,
+        29,
+        6,
+        13
+      ],
+      [
+        9,
+        41,
+        62,
+        4
+      ],
+      [
+        14,
+        45,
+        52,
+        5
+      ],
+      [
+        22,
+        50,
+        36,
+        5
+      ],
+      [
+        39,
+        55,
+        2,
+        6
+      ],
+      [
+        39,
+        60,
+        2,
+        4
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        66,
+        3
+      ]
+    ]
+  },
+  "obs-church-bats-body": {
+    "rects": [
+      [
+        38,
+        0,
+        6,
+        64
+      ]
+    ]
+  },
+  "obs-church-bats-cap-bottom": {
+    "rects": [
+      [
+        37,
+        0,
+        6,
+        15
+      ],
+      [
+        9,
+        15,
+        62,
+        4
+      ],
+      [
+        36,
+        18,
+        2,
+        4
+      ],
+      [
+        42,
+        18,
+        2,
+        4
+      ]
+    ],
+    "circles": [
+      [
+        20,
+        30,
+        8
+      ],
+      [
+        20,
+        42,
+        8
+      ],
+      [
+        60,
+        30,
+        8
+      ],
+      [
+        60,
+        42,
+        8
+      ],
+      [
+        40,
+        29,
+        8.5
+      ],
+      [
+        40,
+        42,
+        8.5
+      ],
+      [
+        40,
+        50,
+        7
+      ]
+    ]
+  },
+  "obs-countryside-beehive-body": {
+    "rects": [
+      [
+        35,
+        0,
+        10,
+        64
+      ]
+    ]
+  },
+  "obs-countryside-beehive-cap-bottom": {
+    "rects": [
+      [
+        35,
+        0,
+        10,
+        24
+      ],
+      [
+        18,
+        44,
+        44,
+        22
+      ],
+      [
+        31,
+        25,
+        18,
+        6
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        43,
+        19
+      ]
+    ]
+  },
+  "obs-countryside-swing-body": {
+    "rects": [
+      [
+        15,
+        0,
+        50,
+        64
+      ]
+    ]
+  },
+  "obs-countryside-swing-cap-bottom": {
+    "rects": [
+      [
+        15,
+        0,
+        50,
+        51
+      ],
+      [
+        8,
+        51,
+        64,
+        9
+      ]
+    ]
+  },
+  "obs-school-handbell-body": {
+    "rects": [
+      [
+        37,
+        0,
+        6,
+        64
+      ]
+    ]
+  },
+  "obs-school-handbell-cap-bottom": {
+    "rects": [
+      [
+        37,
+        0,
+        6,
+        10
+      ],
+      [
+        36,
+        10,
+        8,
+        23
+      ],
+      [
+        31,
+        33,
+        18,
+        9
+      ],
+      [
+        27,
+        42,
+        26,
+        10
+      ],
+      [
+        22,
+        52,
+        36,
+        6
+      ],
+      [
+        18,
+        58,
+        44,
+        2
+      ],
+      [
+        15,
+        60,
+        50,
+        6
+      ],
+      [
+        37.5,
+        66,
+        5,
+        3
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        71,
+        3
+      ]
+    ]
+  },
+  "obs-school-kite-body": {
+    "rects": [
+      [
+        39,
+        0,
+        2,
+        64
+      ]
+    ]
+  },
+  "obs-school-kite-cap-bottom": {
+    "rects": [
+      [
+        39,
+        0,
+        2,
+        18
+      ],
+      [
+        39,
+        17,
+        2,
+        6
+      ],
+      [
+        35,
+        22,
+        10,
+        8
+      ],
+      [
+        26,
+        30,
+        28,
+        6
+      ],
+      [
+        19,
+        36,
+        42,
+        8
+      ],
+      [
+        27,
+        44,
+        26,
+        10
+      ],
+      [
+        34,
+        54,
+        12,
+        8
+      ],
+      [
+        37,
+        62,
+        6,
+        4
+      ]
+    ]
+  },
+  "obs-school-lamp-body": {
+    "rects": [
+      [
+        38,
+        0,
+        4,
+        64
+      ]
+    ]
+  },
+  "obs-school-lamp-cap-bottom": {
+    "rects": [
+      [
+        38,
+        0,
+        4,
+        26
+      ],
+      [
+        35,
+        26,
+        10,
+        5
+      ],
+      [
+        34,
+        31,
+        12,
+        6
+      ],
+      [
+        28,
+        37,
+        24,
+        7
+      ],
+      [
+        19,
+        44,
+        42,
+        6
+      ],
+      [
+        11,
+        50,
+        58,
+        7
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        62,
+        6
+      ]
+    ]
+  },
+  "obs-city-cradle-body": {
+    "rects": [
+      [
+        13,
+        0,
+        54,
+        64
+      ]
+    ]
+  },
+  "obs-city-cradle-cap-bottom": {
+    "rects": [
+      [
+        13,
+        0,
+        54,
+        36
+      ],
+      [
+        8,
+        36,
+        64,
+        30
+      ]
+    ]
+  },
+  "obs-city-trafficlight-body": {
+    "rects": [
+      [
+        36,
+        0,
+        8,
+        64
+      ]
+    ]
+  },
+  "obs-city-trafficlight-cap-bottom": {
+    "rects": [
+      [
+        36,
+        0,
+        8,
+        11
+      ],
+      [
+        29,
+        11,
+        22,
+        7
+      ],
+      [
+        23,
+        17,
+        34,
+        54
+      ]
+    ]
+  },
+  "obs-city-neonsign-body": {
+    "rects": [
+      [
+        18,
+        0,
+        44,
+        64
+      ]
+    ]
+  },
+  "obs-city-neonsign-cap-bottom": {
+    "rects": [
+      [
+        18,
+        0,
+        44,
+        34
+      ],
+      [
+        8,
+        33,
+        64,
+        32
+      ]
+    ]
+  },
+  "obs-space-arm-body": {
+    "rects": [
+      [
+        29,
+        0,
+        22,
+        64
+      ]
+    ]
+  },
+  "obs-space-arm-cap-bottom": {
+    "rects": [
+      [
+        29,
+        0,
+        22,
+        16
+      ],
+      [
+        25,
+        39,
+        30,
+        9
+      ],
+      [
+        50,
+        48,
+        8,
+        5
+      ],
+      [
+        55,
+        51,
+        7,
+        8
+      ],
+      [
+        56,
+        59,
+        6,
+        6
+      ],
+      [
+        18,
+        51,
+        7,
+        8
+      ],
+      [
+        22,
+        48,
+        8,
+        5
+      ],
+      [
+        18,
+        59,
+        6,
+        6
+      ],
+      [
+        36,
+        54,
+        8,
+        14
+      ],
+      [
+        32,
+        58,
+        16,
+        6
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        27,
+        12
+      ]
+    ]
+  },
+  "obs-space-astronaut-body": {
+    "rects": [
+      [
+        37,
+        0,
+        6,
+        64
+      ]
+    ]
+  },
+  "obs-space-astronaut-cap-bottom": {
+    "rects": [
+      [
+        37,
+        0,
+        6,
+        15
+      ],
+      [
+        31,
+        15,
+        18,
+        6
+      ],
+      [
+        29,
+        46,
+        22,
+        16
+      ],
+      [
+        30,
+        61,
+        7,
+        9
+      ],
+      [
+        43,
+        61,
+        7,
+        9
+      ],
+      [
+        29,
+        69,
+        9,
+        4
+      ],
+      [
+        42,
+        69,
+        9,
+        4
+      ],
+      [
+        12,
+        36,
+        7,
+        7
+      ],
+      [
+        61,
+        58,
+        7,
+        7
+      ],
+      [
+        16,
+        41,
+        6,
+        6
+      ],
+      [
+        21,
+        47,
+        8,
+        6
+      ],
+      [
+        52,
+        50,
+        10,
+        6
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        33,
+        14
+      ]
+    ]
+  },
+  "obs-church-ivystone-body": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        64
+      ]
+    ]
+  },
+  "obs-church-ivystone-cap-top": {
+    "rects": [
+      [
+        8,
+        32,
+        64,
+        48
+      ],
+      [
+        22,
+        22,
+        36,
+        10
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        31,
+        18
+      ]
+    ]
+  },
+  "obs-church-font-body": {
+    "rects": [
+      [
+        24,
+        0,
+        32,
+        64
+      ]
+    ]
+  },
+  "obs-church-font-cap-top": {
+    "rects": [
+      [
+        7,
+        15,
+        66,
+        6
+      ],
+      [
+        10,
+        21,
+        60,
+        12
+      ],
+      [
+        16,
+        33,
+        48,
+        9
+      ],
+      [
+        25,
+        42,
+        30,
+        6
+      ],
+      [
+        22,
+        48,
+        36,
+        8
+      ],
+      [
+        24,
+        56,
+        32,
+        24
+      ]
+    ]
+  },
+  "obs-church-lychgate-body": {
+    "rects": [
+      [
+        22,
+        0,
+        36,
+        64
+      ]
+    ]
+  },
+  "obs-church-lychgate-cap-top": {
+    "rects": [
+      [
+        35,
+        17,
+        10,
+        6
+      ],
+      [
+        28,
+        23,
+        24,
+        7
+      ],
+      [
+        21,
+        30,
+        38,
+        7
+      ],
+      [
+        14,
+        37,
+        52,
+        6
+      ],
+      [
+        7,
+        43,
+        66,
+        7
+      ],
+      [
+        22,
+        50,
+        36,
+        30
+      ]
+    ]
+  },
+  "obs-countryside-haybales-body": {
+    "rects": [
+      [
+        9,
+        0,
+        62,
+        64
+      ]
+    ]
+  },
+  "obs-countryside-haybales-cap-top": {
+    "rects": [
+      [
+        10,
+        18,
+        60,
+        31
+      ],
+      [
+        9,
+        49,
+        62,
+        31
+      ]
+    ]
+  },
+  "obs-countryside-pumpkinstack-body": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        64
+      ]
+    ]
+  },
+  "obs-countryside-pumpkinstack-cap-top": {
+    "rects": [
+      [
+        8,
+        47,
+        64,
+        33
+      ],
+      [
+        19,
+        28,
+        42,
+        13
+      ],
+      [
+        27,
+        22,
+        26,
+        25
+      ],
+      [
+        34,
+        9,
+        12,
+        10
+      ],
+      [
+        37,
+        18,
+        6,
+        5
+      ]
+    ]
+  },
+  "obs-countryside-churn-body": {
+    "rects": [
+      [
+        16,
+        0,
+        48,
+        64
+      ]
+    ]
+  },
+  "obs-countryside-churn-cap-top": {
+    "rects": [
+      [
+        25,
+        14,
+        30,
+        6
+      ],
+      [
+        29,
+        20,
+        22,
+        13
+      ],
+      [
+        22,
+        33,
+        36,
+        6
+      ],
+      [
+        16,
+        39,
+        48,
+        41
+      ],
+      [
+        9,
+        51,
+        7,
+        8
+      ],
+      [
+        64,
+        51,
+        7,
+        8
+      ]
+    ]
+  },
+  "obs-school-books-body": {
+    "rects": [
+      [
+        11,
+        0,
+        58,
+        64
+      ]
+    ]
+  },
+  "obs-school-books-cap-top": {
+    "rects": [
+      [
+        9,
+        33,
+        61,
+        47
+      ],
+      [
+        14,
+        22,
+        50,
+        11
+      ],
+      [
+        29,
+        10,
+        22,
+        12
+      ]
+    ]
+  },
+  "obs-school-lockers-body": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        64
+      ]
+    ]
+  },
+  "obs-school-lockers-cap-top": {
+    "rects": [
+      [
+        8,
+        33,
+        64,
+        47
+      ],
+      [
+        5,
+        28,
+        70,
+        5
+      ],
+      [
+        29,
+        10,
+        22,
+        18
+      ]
+    ]
+  },
+  "obs-school-globe-body": {
+    "rects": [
+      [
+        35,
+        0,
+        10,
+        64
+      ]
+    ]
+  },
+  "obs-school-globe-cap-top": {
+    "rects": [
+      [
+        35,
+        55,
+        10,
+        25
+      ],
+      [
+        33,
+        56,
+        14,
+        6
+      ],
+      [
+        38,
+        53,
+        4,
+        3
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        31,
+        23
+      ]
+    ]
+  },
+  "obs-city-postbox-body": {
+    "rects": [
+      [
+        14,
+        0,
+        52,
+        64
+      ]
+    ]
+  },
+  "obs-city-postbox-cap-top": {
+    "rects": [
+      [
+        9,
+        31,
+        62,
+        5
+      ],
+      [
+        14,
+        36,
+        52,
+        44
+      ],
+      [
+        18,
+        20,
+        44,
+        11
+      ],
+      [
+        30,
+        14,
+        20,
+        6
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        32,
+        19
+      ]
+    ]
+  },
+  "obs-city-phonebox-body": {
+    "rects": [
+      [
+        10,
+        0,
+        60,
+        64
+      ]
+    ]
+  },
+  "obs-city-phonebox-cap-top": {
+    "rects": [
+      [
+        10,
+        35,
+        60,
+        45
+      ],
+      [
+        7,
+        26,
+        66,
+        9
+      ],
+      [
+        14,
+        17,
+        52,
+        9
+      ],
+      [
+        33,
+        9,
+        14,
+        8
+      ]
+    ]
+  },
+  "obs-city-hydrant-body": {
+    "rects": [
+      [
+        27,
+        0,
+        26,
+        64
+      ]
+    ]
+  },
+  "obs-city-hydrant-cap-top": {
+    "rects": [
+      [
+        20,
+        30,
+        40,
+        42
+      ],
+      [
+        17,
+        27,
+        46,
+        4
+      ],
+      [
+        17,
+        66,
+        46,
+        6
+      ],
+      [
+        9,
+        45,
+        10,
+        8
+      ],
+      [
+        61,
+        45,
+        10,
+        8
+      ],
+      [
+        23,
+        20,
+        34,
+        8
+      ],
+      [
+        31,
+        16,
+        18,
+        4
+      ],
+      [
+        36,
+        10,
+        8,
+        6
+      ],
+      [
+        27,
+        72,
+        26,
+        8
+      ]
+    ]
+  },
+  "obs-space-crystals-body": {
+    "rects": [
+      [
+        8,
+        0,
+        64,
+        64
+      ]
+    ]
+  },
+  "obs-space-crystals-cap-top": {
+    "rects": [
+      [
+        8,
+        37,
+        20,
+        43
+      ],
+      [
+        52,
+        29,
+        20,
+        51
+      ],
+      [
+        30,
+        18,
+        20,
+        62
+      ],
+      [
+        34,
+        11,
+        12,
+        7
+      ],
+      [
+        11,
+        31,
+        14,
+        6
+      ],
+      [
+        55,
+        23,
+        14,
+        6
+      ]
+    ]
+  },
+  "obs-space-alienplant-body": {
+    "rects": [
+      [
+        33,
+        0,
+        14,
+        64
+      ]
+    ]
+  },
+  "obs-space-alienplant-cap-top": {
+    "rects": [
+      [
+        33,
+        46,
+        14,
+        34
+      ],
+      [
+        6,
+        27,
+        68,
+        7
+      ],
+      [
+        12,
+        34,
+        56,
+        7
+      ],
+      [
+        14,
+        20,
+        52,
+        7
+      ]
+    ],
+    "circles": [
+      [
+        40,
+        31,
+        15
+      ]
+    ]
+  }
+}
