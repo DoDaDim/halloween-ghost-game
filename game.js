@@ -4,7 +4,7 @@
 // marked [build]). Game logic reads every number from CONFIG.
 // Units: logical pixels (360x640 playfield) and seconds.
 // PROGRESSION counts PAIRS PASSED (TUNING v1.7): gapFor/spacingFor/speedFor, unlockAt,
-// startAt, launch.atScore, events firesAt/repeatEvery, hazards/golden minScore are all in pairs.
+// v0.4.2: launch.atScore is the DISPLAYED score. startAt, events firesAt/repeatEvery, hazards/golden minScore are all in pairs.
 // Score (with bonuses) is only for display, best score and medals.
 // QA hooks (query string): ?stage=N|id  ?event=hearse|rocket|<id>  ?pickup=1|all
 //   ?golden=1|0 (golden run)  ?god=1 (no deaths, hits logged)  ?effects=0
@@ -122,7 +122,9 @@ const CONFIG = {
   },
 
   launch: {
-    atScore: 100,            // in PAIRS (v1.7); = stages[space].startAt
+    trigger: 'score',        // v0.4.2 hotfix (David): launch when the DISPLAYED score reaches atScore
+    atScore: 100,            // displayed score (bonuses included); pairs >= stages[space].startAt also launches (QA hooks)
+    eventFinishMaxSeconds: 6, // an ACTIVE event at that moment finishes first (max this long), else it's cleared
     cutsceneSeconds: 2.5,    // no collisions, no scoring, pairs on screen cleared, taps ignored
     speedRamps: true,        // speedFor(score) keeps applying
     then: 'transition',      // normal stage breather afterwards
@@ -144,20 +146,53 @@ const CONFIG = {
     run: { enabled: true, chance: 0.04, scoreMultiplier: 2, firstPointBonus: 10 }, // kept per Boss/David
     maxMultiplier: 2,                   // run x2 and pickup x2 don't stack (null = allow stacking)
     pickupOnGoldenRun: 'doubleInstant', // golden run: pickup pays 2x instant points, no x2 mode
-    pickup: {
-      minScore: 3,           // in PAIRS (v1.7)
-      chancePerPair: 0.06,
-      minPairsBetween: 12,
-      pityAfterPairs: 30,
-      radius: 16,
-      placement: 'gapCentre',
-      instantPoints: 5,
-      space: { chancePerPair: 0.08, minPairsBetween: 10, pityAfterPairs: 25, instantPoints: 10 },
-      drawSize: 44,        // [build] drawn size of the floating golden ghost
-    },
-    mode: { seconds: 8, scoreMultiplier: 2, extendOnPickup: true },
+    // v1.9: the old golden pickup + x2 mode are replaced by CONFIG.specials.rush (golden.run stays)
     sparkleRate: 18,       // [build]
     sparkleLife: 0.6,      // [build]
+  },
+
+  // v1.9 / v1.9.1 (TUNING.md): three rare special ghosts at a gap centre. Progress counts in PAIRS.
+  specials: {
+    minPairsBetweenAny: 8, onePerScreen: true, noSpawnWhileActive: true,
+    noSpawnDuring: ['transition', 'event', 'launch'],
+    radius: 16, placement: 'gapCentre',
+    order: ['rush', 'extraLife', 'slowMo'], // roll order when several are due (pity first)
+    rush: {
+      fromPairs: 10, chancePerPair: 0.03, minPairsBetween: 25, pityAfterPairs: 50,
+      space: { chancePerPair: 0.04, minPairsBetween: 20, pityAfterPairs: 40 },
+      seconds: 5, invincible: true, smashThrough: true,
+      instantPoints: 5, pairPoints: 1, smashBonus: 1, scoreMultiplier: 2, // x2 capped by golden.maxMultiplier
+      graceSeconds: 1.0, floorAndCeilingSafe: true,
+      forwardShift: 30, shiftEaseSeconds: 0.4, // cosmetic only: hitbox stays at ghost.x
+    },
+    extraLife: {
+      fromPairs: 8, chancePerPair: 0.025, minPairsBetween: 30, pityAfterPairs: 60,
+      maxHeld: 1, instantPoints: 2, pointsIfAlreadyHeld: 5,
+      onHit: { invulnSeconds: 1.5, knockToGapCentre: true, knockSeconds: 0.3, vyAfter: 0 },
+      blinkHz: 10,
+    },
+    slowMo: {
+      fromPairs: 15, chancePerPair: 0.03, minPairsBetween: 20, pityAfterPairs: 45,
+      seconds: 6, worldScale: 0.6, rampSeconds: 0.4, instantPoints: 3,
+      tint: '#BFE6FF', tintAlpha: 0.18, overlayFadeSeconds: 0.3,
+      flakes: { max: 18, perSecond: 6, fallMin: 30, fallMax: 60, spinMin: 30, spinMax: 90, sway: 10 },
+    },
+    // [build] Art (ASSETS.md §13). Offsets relative to the 64px ghost's top-left; sizes in game px.
+    art: {
+      pickup: { rush: 'pickup-rush-strip.png', extraLife: 'pickup-life-strip.png', slowMo: 'pickup-chill-strip.png', size: 56, frames: 4, fps: 8 },
+      ghostRush: { file: 'ghost-rush-strip.png', w: 112, h: 64, frames: 4, fps: 12, dx: -48, dy: 0 },
+      rushAura: { file: 'fx-rush-aura-strip.png', w: 96, h: 96, frames: 4, fps: 8, dx: -16, dy: -16 },
+      candyBurst: { file: 'fx-candy-burst-strip.png', w: 128, h: 128, frames: 6, fps: 12 },
+      heart: { file: 'ghost-heart-overlay-strip.png', w: 20, h: 20, frames: 2, fps: 4, dx: 40, dy: 2 },
+      heartPop: { file: 'fx-heart-pop-strip.png', w: 96, h: 96, frames: 6, fps: 12, dx: -16, dy: -16 },
+      heartBreak: { file: 'fx-heart-break-strip.png', w: 96, h: 96, frames: 6, fps: 12, dx: -16, dy: -16 },
+      frostBurst: { file: 'fx-frost-burst-strip.png', w: 96, h: 96, frames: 6, fps: 12, dx: -16, dy: -16 },
+      frostVignette: { file: 'ui-frost-vignette.png' },
+      flakes: ['fx-frost-flake-a.png', 'fx-frost-flake-b.png', 'fx-frost-flake-c.png'], flakeSize: 16,
+      hud: { rush: 'ui-hud-rush-48.png', extraLife: 'ui-hud-life-48.png', slowMo: 'ui-hud-chill-48.png', size: 26 },
+      fxSeconds: 0.5, // [build] = 6 frames @ 12 fps
+      placeholder: { rush: '#FFD966', extraLife: '#FF6F8E', slowMo: '#8FD3FF' },
+    },
   },
 
   // one event per stage visit; repeats (repeatEvery) only while still in that zone
@@ -177,7 +212,7 @@ const CONFIG = {
                      desc: 'Trick-or-treat sweets fall from the top; catch them for +1 each. No hazards.' },
       city:        { id: 'nightBus',     firesAt: 58, repeatEvery: 25, seconds: 3.5, bonus: 6, // TODO stub
                      desc: 'Night bus along the ground (floor rises 70 px) with a pigeon flock above; ride the middle.' },
-      space:       { id: 'meteorShower', firesAt: 120, repeatEvery: 30, seconds: 4.0, bonus: 8,
+      space:       { id: 'meteorShower', firesAt: 120, firesAfterLaunchPairs: 15, repeatEvery: 30, seconds: 4.0, bonus: 8,
                      // [build] 2 diagonal waves, each a curtain of meteors with one clear lane
                      waves: 2, waveCrossAt: [1.0, 2.6], laneHeight: 170, spacing: 50,
                      vx: -320, vy: 160, laneShiftMin: 60, laneShiftMax: 120, laneMinY: 140, laneMaxY: 420,
@@ -189,6 +224,85 @@ const CONFIG = {
     perPair: 1,
     medals: { bronze: 10, silver: 25, gold: 50, pumpkin: 100 },
     bestKey: 'ghostGame.best',
+    // v0.5 player profiles + local top-10 (ScoreService)
+    defaultPlayer: 'Player 1', // the pre-v0.5 best migrates into this profile
+    maxNameLength: 12,
+    maxProfiles: 12,
+    topScoresMax: 10,
+  },
+
+  // v0.5 death animations (Art: ASSETS.md §11.1, death-map.json). Frames death-<type>-<n> and
+  // death-<type>-golden-<n>, loaded as Art's <base>-strip.png (128x128, 12 fps, anchor [64,64] = ghost anchor; drawn at
+  // (ghostX - 64k, ghostY - 64k), k = ghost.size / 64). Each plays once and holds its last frame
+  // (tombstone loops frames loop[0]..loop[1] while held). `seconds` (< 1.5) = how long taps are
+  // ignored; the normal restart lockout starts after it. A type whose frames fail to load falls back
+  // to placeholder drawing. Map: generated from Art's death-map.json (59 ids; art prefixes and
+  // '<stage>-<event>' keys translated to game ids) by qa/v05/gen_config.js, plus 'tomb' (random tomb).
+  // Anything unlisted -> generic.
+  deathAnims: {
+    file: 'death-{type}-strip.png', goldenFile: 'death-{type}-golden-strip.png', // horizontal strips of the -<n> frames
+    frameSize: 128, anchor: [64, 64], fps: 12,
+    types: {
+      bat:       { frames: 10, seconds: 1.1 },
+      pumpkin:   { frames: 8,  seconds: 1.0 },
+      meteor:    { frames: 10, seconds: 1.1 },
+      tombstone: { frames: 10, seconds: 1.3, loop: [2, 9] },
+      skull:     { frames: 10, seconds: 1.0 },
+      floor:     { frames: 8,  seconds: 1.0 },
+      generic:   { frames: 10, seconds: 1.0, fadeLast: true },
+    },
+    aliases: { stars: 'tombstone', stone: 'tombstone', poof: 'generic' }, // extra ?death= names
+    fallback: 'generic',
+    map: {
+      'tomb-a': 'tombstone', 'tomb-b': 'tombstone', 'tomb-c': 'tombstone', coffin: 'tombstone', cross: 'tombstone', moonrock: 'tombstone',
+      'obs-church-spire': 'tombstone', bell: 'generic', branch: 'generic', 'obs-countryside-scarecrow': 'generic', 'obs-school-chimney': 'tombstone', 'obs-school-clocktower': 'tombstone',
+      'obs-city-skyscraper': 'tombstone', cranehook: 'generic', satellite: 'generic', ufo: 'generic', asteroid: 'meteor', 'lantern-branch': 'generic',
+      spider: 'generic', chandelier: 'generic', bats: 'bat', beehive: 'generic', swing: 'generic', handbell: 'generic',
+      kite: 'generic', lamp: 'generic', cradle: 'generic', trafficlight: 'generic', neonsign: 'generic', arm: 'generic',
+      astronaut: 'generic', ivystone: 'tombstone', font: 'tombstone', lychgate: 'tombstone', haybales: 'generic', pumpkinstack: 'pumpkin',
+      churn: 'generic', books: 'generic', lockers: 'generic', globe: 'generic', postbox: 'generic', phonebox: 'generic',
+      hydrant: 'generic', crystals: 'tombstone', alienplant: 'generic', bat: 'bat', pumpkin: 'pumpkin', skull: 'skull',
+      miniAsteroid: 'meteor', alien: 'generic', hearse: 'floor', batSwarm: 'generic', pumpkinRoll: 'generic', sweetShower: 'generic',
+      nightBus: 'floor', 'city-pigeon': 'bat', meteorShower: 'meteor', ground: 'floor', ceiling: 'generic', tomb: 'tombstone',
+    },
+    fx: { // ASSETS.md §11.2 (12 fps)
+      starsRing: { file: 'fx-stars-ring-strip.png', frames: 6, w: 64, h: 32 },
+      smokePuff: { file: 'fx-smoke-puff-strip.png', frames: 4, w: 48, h: 48 },
+      sparklePoof: { file: 'fx-sparkle-poof-strip.png', frames: 5, w: 96, h: 96 },
+      bonk: { file: 'fx-bonk-strip.png', frames: 3, w: 64, h: 64 },
+    },
+    colors: { soot: '#2b2230', smoke: 'rgba(80, 70, 90, 0.55)', star: '#ffe08a', bat: '#5a4a78', spook: '#c9b3f0' },
+  },
+
+  // v0.5 stage transitions (Art: ASSETS.md §11.3): sky/palette crossfade, swooshing banner, burst,
+  // 'Stage N' badge, parallax swap. Files use Art's stage ids (assets.backgrounds.artStageIds: school -> schools).
+  transitions: {
+    palette: { // from Art's sky-palettes.json ([top, bottom] of each bg-<stage>-far sky), interpolated during the crossfade
+      graveyard:   ['#241D40', '#5E4A86'],
+      church:      ['#222350', '#5A5490'],
+      countryside: ['#1E2C4A', '#4E6E8A'],
+      school:      ['#26245A', '#6E5694'],
+      city:        ['#1C2044', '#4C3E7A'],
+      space:       ['#120F2C', '#2B2050'],
+    },
+    tintPeak: 0.32,          // overlay alpha at mid-crossfade (0 at both ends)
+    banner: { inSeconds: 0.4, outSeconds: 0.4, fromX: 1.15, toX: -1.15, w: 300, h: 90, textX: 150, textBaseline: 47, sparkles: 14 }, // x as a fraction of W
+    badge: { text: 'Stage {n}', y: 270, w: 96, h: 48, size: 14 },
+    swap: { slide: { far: 18, mid: 30, near: 0 } }, // crossfaded layers ease up from +slide px (over assets.backgrounds.fadeSeconds)
+    uiBarY: 505,             // v0.5 start/game-over buttons (players, top-10), logical px
+    art: {                   // {stage} = Art's stage id, {n} = frame / stage number. Missing files -> placeholder drawing.
+      banner: 'ui-banner-{stage}.png',          // pre-lettered (Capriola), preferred
+      bannerStageBlank: 'ui-banner-{stage}-blank.png', bannerBlank: 'ui-banner-blank.png', // + CONFIG.looks name drawn on top
+      burst: { file: 'fx-burst-{stage}-strip.png', frames: 6, w: 160, h: 160 },
+      swoosh: { file: 'fx-swoosh-strip.png', frames: 6, w: 240, h: 64 }, // frame 0 is empty on purpose
+      badge: 'ui-stage-badge-{n}.png', badgeBlank: 'ui-stage-badge-blank.png',
+    },
+  },
+  // v0.5 profile icons (ASSETS.md §11.4), used by the DOM picker
+  profileIcons: {
+    dir: 'assets/png/2x/', size: 32,
+    add: 'ui-icon-add-player-{size}.png', trophy: 'ui-icon-trophy-{size}.png', share: 'ui-icon-share-{size}.png',
+    chip: 'ui-icon-player-chip-{color}-{size}.png', chipColors: ['pink', 'mint', 'butter', 'lilac'], // cycled per player
   },
 
   // [build] Column / hazard object registry. Sprites are picked up automatically when
@@ -282,7 +396,37 @@ const CONFIG = {
     space:       { name: 'Outer Space', sky: ['#05040f', '#1c1238'], celestial: 'planet', ground: '#4a4560', groundTop: '#7d7896', layers: ['#ffffff', '#c9b3f0', '#6c6488'] },
   },
 
+  // v0.5 'Share score' (game-over button). {name} {score} {stage} {best} are filled in; the URL is sent separately
+  // where the target supports it (navigator.share url, X intent url=) and appended for plain-text targets.
+  share: {
+    enabled: true,
+    url: 'https://dodadim.github.io/halloween-ghost-game/',
+    title: 'Ghost Game',
+    template: '{name} scored {score} in Ghost Game, reaching {stage}! Can you beat it?',
+    fileName: 'ghost-game-score.png',
+    card: { w: 600, h: 800, scale: 2 }, // generated at 2x (1200x1600) with Art's @2x frame
+    // Art (ASSETS.md §12): frame per stage (stage id 'school' -> file 'schools'); no-stage file = generic night sky
+    frameFile: 'assets/ui-scorecard-frame{stage}@2x.png', frameStageFile: { school: 'schools' },
+    layout: 'assets/scorecard-layout.json',
+    font: '"Baloo 2", "Arial Rounded MT Bold", "Nunito", "Trebuchet MS", system-ui, sans-serif', // no runtime font loading
+    areas: { // fallback copy of scorecard-layout.json (600x800 coords)
+      ghost: { rect: [200, 66, 200, 200] },
+      stage: { rect: [110, 282, 380, 40], maxFont: 28, color: '#7A5A9E', weight: 'bold' },
+      score: { rect: [80, 330, 440, 140], maxFont: 120, color: '#4A3358', weight: '900', stroke: '#FFFFFF', strokeW: 4 },
+      best: { rect: [130, 480, 340, 40], maxFont: 28, color: '#C9798F', weight: 'bold' },
+      player: { rect: [120, 546, 360, 56], maxFont: 34, color: '#4A3358', weight: 'bold' },
+      url: { rect: [90, 742, 420, 36], maxFont: 22, color: '#4A3358', weight: 'bold' },
+    },
+    intents: {
+      x: 'https://twitter.com/intent/tweet?text={text}&url={url}',
+      facebook: 'https://www.facebook.com/sharer/sharer.php?u={url}',
+      whatsapp: 'https://wa.me/?text={full}',
+    },
+    toastSeconds: 1.6,
+  },
+
   ui: {
+    tapCuePad: 6, tapCueOffsets: [-30, 52, -84, 100, -130, 150], // QA TR-CUE: candidate y offsets from the ghost, first clear of banner + badge wins
     tapCueSeconds: 1.0,    // v0.3.1: 'Tap!' cue when the ghost pops out after the rocket
     restartLockout: 0.4,
     font: '"Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif',
@@ -392,56 +536,144 @@ const spacingFor = s => Math.max(CONFIG.tombstones.spacingMin, CONFIG.tombstones
 const speedFor = s => Math.min(CONFIG.speed.max, CONFIG.speed.start + Math.floor(s / CONFIG.speed.stepEvery) * CONFIG.speed.stepAmount);
 
 // =============================================================================
-// ScoreService — score persistence + game-over hook, kept apart from game logic.
-// Public API (window.ScoreService): getBest(), submitScore(name, score) (stub),
-// addGameOverListener(fn). Saving a best is INTERNAL: the game claims the
-// internal functions once at startup (claimInternal), so console code can't
-// call saveBest/onGameOver with an arbitrary value when debug is off. With debug
-// on, the game re-exposes saveBest/onGameOver/onGameOverListeners for QA.
-// NOTE: localStorage itself can still be edited by a player; real protection
-// for a leaderboard needs server-side validation (not attempted here).
+// ScoreService — profiles, per-player bests, local top-10 and the game-over hook,
+// kept apart from game logic.
+// Public API (window.ScoreService):
+//   getProfiles() -> [{ id, name, best }]       getCurrentProfile() -> { id, name }
+//   addProfile(name) -> { ok, profile | reason } (trimmed, 1..maxNameLength chars, unique case-insensitively; selects it)
+//   selectProfile(idOrName) -> bool              getBest(profile?) (default: current player)
+//   getTopScores() -> [{ name, score, date, stage }] (best first, max topScoresMax)
+//   submitScore(name, score, meta) -> Promise (STUB for a future online leaderboard; resolves not-implemented)
+//   addGameOverListener(fn)
+// Saving a score is INTERNAL: the game claims onGameOver/saveBest once at startup
+// (claimInternal), so console code can't post arbitrary scores when debug is off.
+// v0.5 storage: profiles in `${bestKey}.profiles`, top-10 in `${bestKey}.top`.
+// Player 1 keeps the legacy `${bestKey}` slot, so the pre-v0.5 best migrates into it
+// untouched; other players use `${bestKey}.<id>`. If localStorage throws, everything
+// lives in memory for the session (QA B6).
+// NOTE: localStorage itself can still be edited by a player; real protection for a
+// leaderboard needs server-side validation (not attempted here).
 // =============================================================================
 const ScoreService = (() => {
-  const key = () => CONFIG.scoring.bestKey;
+  const S = () => CONFIG.scoring;
+  const key = () => S().bestKey;
   const listeners = [];
-  let mem = 0; // in-memory best (closure): survives when localStorage throws (QA B6)
-  function getBest() {
-    let stored = 0;
-    try { stored = parseInt(localStorage.getItem(key()), 10) || 0; } catch (e) { stored = 0; }
-    return Math.max(mem, stored);
+  const mem = { best: {}, profiles: null, top: null }; // in-memory mirror (survives blocked storage)
+  const read = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const write = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
+  const parse = (s, d) => { try { const v = JSON.parse(s); return v == null ? d : v; } catch (e) { return d; } };
+  const cleanName = n => String(n == null ? '' : n).replace(/\s+/g, ' ').trim();
+  // QA: name length counts graphemes (Intl.Segmenter), falling back to code points
+  const seg = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+  const graphemes = s => seg ? Array.from(seg.segment(s), x => x.segment) : Array.from(s);
+  const nameLen = s => graphemes(s).length;
+  const clipName = s => graphemes(s).slice(0, S().maxNameLength).join('');
+  const bestKeyFor = id => (id === 'p1' ? key() : `${key()}.${id}`);
+
+  function loadProfiles() {
+    let p = parse(read(`${key()}.profiles`), null);
+    if (!p || !Array.isArray(p.list) || !p.list.length) p = mem.profiles;
+    if (!p || !Array.isArray(p.list) || !p.list.length) { // first run / migration: legacy best -> Player 1
+      p = { list: [{ id: 'p1', name: S().defaultPlayer }], current: 'p1' };
+      write(`${key()}.profiles`, JSON.stringify(p));
+    }
+    p.list = p.list.filter(x => x && typeof x.id === 'string' && cleanName(x.name)).map(x => ({ id: x.id, name: clipName(cleanName(x.name)) }));
+    if (!p.list.length) p.list = [{ id: 'p1', name: S().defaultPlayer }];
+    if (!p.list.some(x => x.id === p.current)) p.current = p.list[0].id;
+    mem.profiles = p;
+    return p;
   }
-  /** Saves score if it beats the best (memory always, storage when available). Returns true on a new best. */
-  function saveBest(score) {
-    if (!(score > getBest())) return false;
-    mem = score;
-    try { localStorage.setItem(key(), String(score)); } catch (e) { /* storage unavailable: memory keeps it */ }
+  function saveProfiles(p) { mem.profiles = p; write(`${key()}.profiles`, JSON.stringify(p)); }
+  function findProfile(ref) {
+    const p = loadProfiles();
+    if (ref == null) return p.list.find(x => x.id === p.current);
+    if (typeof ref === 'object') ref = ref.id;
+    const s = String(ref);
+    return p.list.find(x => x.id === s) || p.list.find(x => x.name.toLowerCase() === cleanName(s).toLowerCase()) || null;
+  }
+  function getBest(profile) {
+    const pr = findProfile(profile);
+    if (!pr) return 0;
+    const stored = parseInt(read(bestKeyFor(pr.id)), 10) || 0;
+    return Math.max(mem.best[pr.id] || 0, stored);
+  }
+  function getProfiles() { return loadProfiles().list.map(x => Object.freeze({ id: x.id, name: x.name, best: getBest(x.id) })); }
+  function getCurrentProfile() { const x = findProfile(); return Object.freeze({ id: x.id, name: x.name }); }
+  function addProfile(name) {
+    const n = cleanName(name);
+    if (!n) return { ok: false, reason: 'empty' };
+    if (nameLen(n) > S().maxNameLength) return { ok: false, reason: 'too-long' };
+    const p = loadProfiles();
+    if (p.list.some(x => x.name.toLowerCase() === n.toLowerCase())) return { ok: false, reason: 'duplicate' };
+    if (p.list.length >= S().maxProfiles) return { ok: false, reason: 'full' };
+    const id = 'p' + (Math.max(0, ...p.list.map(x => parseInt(x.id.slice(1), 10) || 0)) + 1);
+    p.list.push({ id, name: n }); p.current = id; saveProfiles(p); profileChanged();
+    return { ok: true, profile: Object.freeze({ id, name: n }) };
+  }
+  function selectProfile(ref) {
+    const pr = findProfile(ref == null ? '' : ref);
+    if (!pr) return false;
+    const p = loadProfiles(); p.current = pr.id; saveProfiles(p); profileChanged();
     return true;
   }
-  /** Called once by the game when a run ends. Returns { best, newBest }. */
+  function getTopScores() {
+    let t = parse(read(`${key()}.top`), null);
+    if (!Array.isArray(t)) t = mem.top || [];
+    // QA PR-TOP-LOAD: drop non-finite / negative scores and unknown stages, then re-sort (stable: earlier date first)
+    const stages = new Set(CONFIG.stages.list.map(s => s.id));
+    t = t.filter(e => e && typeof e.score === 'number' && Number.isFinite(e.score) && e.score >= 0 && (!e.stage || stages.has(String(e.stage))))
+      .map((e, i) => ({ e, i })).sort((a, b) => b.e.score - a.e.score || (String(a.e.date || '') < String(b.e.date || '') ? -1 : String(a.e.date || '') > String(b.e.date || '') ? 1 : a.i - b.i))
+      .map(x => x.e).slice(0, S().topScoresMax);
+    mem.top = t;
+    return t.map(e => Object.freeze({ name: clipName(cleanName(e.name)), score: e.score, date: String(e.date || ''), stage: String(e.stage || '') }));
+  }
+  /** INTERNAL. Saves score if it beats the current player's best. Returns true on a new best. */
+  function saveBest(score) {
+    if (!(score > getBest())) return false;
+    const id = findProfile().id;
+    mem.best[id] = score;
+    write(bestKeyFor(id), String(score));
+    return true;
+  }
+  function recordTop(entry) { // returns 1-based rank, or 0 if it didn't make the list
+    if (!(entry.score > 0)) return 0;
+    const t = getTopScores().map(e => ({ ...e }));
+    t.push(entry);
+    t.sort((a, b) => b.score - a.score || (a.date < b.date ? -1 : 1)); // ties: the earlier run keeps its place
+    const kept = t.slice(0, S().topScoresMax), rank = kept.indexOf(entry) + 1;
+    mem.top = kept; write(`${key()}.top`, JSON.stringify(kept));
+    return rank;
+  }
+  /** INTERNAL. Called once by the game when a run ends. Returns { best, newBest, rank, player }. */
+  const localDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; // QA PR-DATE
   function onGameOver(score, meta = {}) {
+    const player = findProfile().name;
     const newBest = saveBest(score);
     const best = Math.max(score, getBest());
+    const rank = recordTop({ name: player, score, date: localDate(), stage: String(meta.stage || '') });
     // QA DG9: listeners get a frozen COPY; the game's values below never come from it
-    const shared = Object.freeze({ score, best, newBest, ...meta });
+    const shared = Object.freeze({ score, best, newBest, rank, player, ...meta });
     for (const fn of listeners) {
       try { fn(shared); } catch (e) { console.warn('onGameOver listener failed', e); }
     }
-    return { best, newBest };
+    return { best, newBest, rank, player };
   }
   let claimed = false;
+  let profileHook = null; // QA PR-SYNC: the game's HUD/player refresh, set via claimInternal
+  const profileChanged = () => { if (profileHook) try { profileHook(getCurrentProfile()); } catch (e) { console.warn('profile hook failed', e); } };
   const svc = {
-    getBest,
+    getBest, getProfiles, getCurrentProfile, addProfile, selectProfile, getTopScores,
     /** Stub for a future online leaderboard. Resolves without sending anything. */
-    submitScore(name, score) {
-      return Promise.resolve({ ok: false, submitted: false, reason: 'not-implemented', name, score });
+    submitScore(name, score, meta = {}) {
+      return Promise.resolve({ ok: false, submitted: false, reason: 'not-implemented', name, score, meta });
     },
-    /** Extra game-over callbacks: fn({ score, best, newBest, golden, stage }). */
+    /** Extra game-over callbacks: fn({ score, best, newBest, rank, player, golden, stage }). */
     addGameOverListener(fn) { if (typeof fn === 'function') listeners.push(fn); },
     /** One-shot: the game takes the internal functions at startup; later calls get null. */
     claimInternal() {
       if (claimed) return null;
       claimed = true;
-      return { saveBest, onGameOver, listeners };
+      return { saveBest, onGameOver, listeners, onProfileChange: fn => { profileHook = fn; } };
     },
   };
   return svc;
@@ -515,8 +747,10 @@ window.ScoreService = ScoreService;
   const forceGolden = qp('golden') != null ? qp('golden') !== '0' : null;
   const qaStage = qp('stage');
   const qaEvent = qp('event');
-  const qaPickup = qp('pickup'); // '1' = next pair, 'all' = every pair
+  const qaPickup = qp('pickup'); // '1' = next pair, 'all' = every eligible pair (v1.9: a Rush special)
+  const qaPower = (qp('power') || '').split(',').map(k => ({ rush: 'rush', life: 'extraLife', extralife: 'extraLife', chill: 'slowMo', slowmo: 'slowMo' })[k.trim().toLowerCase()]).filter(Boolean);
   const qaGod = qp('god') === '1';
+  const qaDeath = qp('death'); // v0.5: force a death anim (bat, pumpkin, meteor, stone|stars, skull, floor, poof|generic)
   const effectsOn = CONFIG.ambient.enabled && qp('effects') !== '0';
 
   const STAGES = CONFIG.stages.list;
@@ -541,12 +775,16 @@ window.ScoreService = ScoreService;
   // ---- Asset preload --------------------------------------------------------------
   const A = CONFIG.assets;
   const sprites = {
+    specials: {},      // v1.9 specials art (pickups, rush ghost, heart, frost, HUD)
     res: 1,
     ghost: { normal: null, golden: null },
     sets: {},          // column sets by object id: { body, capTop, capBottom, bodyPattern, hb, floorEdge, ceilEdge }
     tombVariants: [],  // tomb object ids that loaded completely
     sheets: {},        // name -> { img, def, json }
     bg: {},            // `${stage}-${layer}` -> image
+    death: {},         // v0.5 death strips: '<type>' and '<type>:golden'
+    fx: {},            // v0.5 fx strips (starsRing, smokePuff, sparklePoof, bonk)
+    ui: {},            // v0.5 transition art: banner-<stage>, bannerBlank(-<stage>), burst-<stage>, swoosh, badge-<n>, badgeBlank
     hitboxes: null,
     status: 'pending',
     loaded: [], missing: [],
@@ -662,7 +900,31 @@ window.ScoreService = ScoreService;
       if (hb && hb.ghost) applyGhostHitbox(hb.ghost, 'hitboxes.json');
       if (!sprites.ghost.normal) { hitboxRadius = CONFIG.ghost.hitboxRadius; hitboxOffsetY = 0; hitboxSource = 'config'; }
       sprites.status = 'done';
+      loadV05Art(dir); // v0.5 deaths / fx / transition art: after the game is playable, never blocks the start
     });
+  }
+  function loadV05Art(dir) {
+    const DA = CONFIG.deathAnims, TA = CONFIG.transitions.art, sid = id => (A.backgrounds.artStageIds || {})[id] || id;
+    const jobs = [], put = (obj, k, f) => jobs.push(loadImage(dir + f)
+      .then(img => (img && img.decode ? img.decode().then(() => img, () => img) : img)) // decode off the frame: no hitch at the first banner/death
+      .then(img => { if (img) obj[k] = img; }));
+    for (const type of Object.keys(DA.types)) {
+      put(sprites.death, type, DA.file.replace('{type}', type));
+      put(sprites.death, type + ':golden', DA.goldenFile.replace('{type}', type));
+    }
+    for (const [k, f] of Object.entries(DA.fx)) put(sprites.fx, k, f.file);
+    put(sprites.ui, 'bannerBlank', TA.bannerBlank); put(sprites.ui, 'badgeBlank', TA.badgeBlank); put(sprites.ui, 'swoosh', TA.swoosh.file);
+    STAGES.forEach((st, i) => {
+      put(sprites.ui, `banner-${st.id}`, TA.banner.replace('{stage}', sid(st.id)));
+      put(sprites.ui, `bannerBlank-${st.id}`, TA.bannerStageBlank.replace('{stage}', sid(st.id)));
+      put(sprites.ui, `burst-${st.id}`, TA.burst.file.replace('{stage}', sid(st.id)));
+      put(sprites.ui, `badge-${i + 1}`, TA.badge.replace('{n}', i + 1));
+    });
+    const SA = CONFIG.specials.art; // v1.9 specials (Art §13); missing -> placeholder drawing
+    for (const k of ['rush', 'extraLife', 'slowMo']) { put(sprites.specials, 'pickup-' + k, SA.pickup[k]); put(sprites.specials, 'hud-' + k, SA.hud[k]); }
+    for (const k of ['ghostRush', 'rushAura', 'candyBurst', 'heart', 'heartPop', 'heartBreak', 'frostBurst', 'frostVignette']) put(sprites.specials, k, SA[k].file);
+    SA.flakes.forEach((f, i) => put(sprites.specials, 'flake-' + i, f));
+    return (sprites.v05 = Promise.all(jobs).then(() => { sprites.v05Status = 'done'; }));
   }
 
   // v1.8 collision rule: the hitbox must be unbroken (no y without a shape) from the screen edge
@@ -723,9 +985,12 @@ window.ScoreService = ScoreService;
     score: 0,             // display / best / medals only
     pairs: 0,             // PAIRS PASSED: drives all progression (TUNING v1.7)
     best: ScoreService.getBest(),
-    newBest: false,
+    player: ScoreService.getCurrentProfile().name,
+    newBest: false, rank: 0,
+    death: null, deathObj: null,
     golden: false,           // golden RUN (per-run roll)
-    goldenModeT: 0,          // seconds of pickup golden mode left
+    goldenModeT: 0,          // v1.9: seconds of Ghost Rush left (gold glow, x2, invincible)
+    sp: newSpecials(),
     firstPointGiven: false,
     deadTime: 0,
     flapT: -1,
@@ -749,7 +1014,7 @@ window.ScoreService = ScoreService;
   // Full game object only in debug; otherwise a small read-only view
   if (DEBUG) window.ghostGame = game;
   else window.ghostGame = Object.freeze(Object.defineProperties({}, Object.fromEntries(
-    ['state', 'score', 'best', 'pairs', 'golden'].map(k => [k, { get: () => game[k], enumerable: true }]).concat([['stage', { get: () => STAGES[game.stageIndex].id, enumerable: true }]]))));
+    ['state', 'score', 'best', 'pairs', 'golden', 'player'].map(k => [k, { get: () => game[k], enumerable: true }]).concat([['stage', { get: () => STAGES[game.stageIndex].id, enumerable: true }]]))));
   game.debug = DEBUG;
   Object.defineProperty(game, 'hitbox', { get: () => ({ radius: hitboxRadius, offsetY: hitboxOffsetY, source: hitboxSource }) });
   Object.defineProperty(game, 'stage', { get: () => STAGES[game.stageIndex].id });
@@ -759,13 +1024,19 @@ window.ScoreService = ScoreService;
   function physics() { // stage override (space) merged over CONFIG.ghost
     return Object.assign({}, CONFIG.ghost, stage().physics || {});
   }
-  function pickupCfg() {
-    const P = CONFIG.golden.pickup;
-    return Object.assign({}, P, (P[stage().id] && typeof P[stage().id] === 'object') ? P[stage().id] : {});
+  function newSpecials() { // v1.9 specials state (per run)
+    return { since: { rush: 0, extraLife: 0, slowMo: 0 }, last: { rush: null, extraLife: null, slowMo: null }, sinceAny: 0, lastAny: null,
+      graceT: 0, slowT: 0, slowF: 1, frostA: 0, lag: 0, lifeHeld: 0, invulnT: 0, knock: null, shift: 0, smashed: 0,
+      fx: [], flakes: [], flakeAcc: 0, collected: [], saves: [], force: qaPower.slice() };
   }
+  function specialCfg(type) { const P = CONFIG.specials[type], o = P[stage().id]; return Object.assign({}, P, o && typeof o === 'object' ? o : {}); }
+  function pickupCfg() { return { radius: CONFIG.specials.radius }; }
+  const worldNow = () => game.time - game.sp.lag; // hazard motion clock (slows with Chill)
+  const specialSafe = () => game.goldenModeT > 0 || game.sp.graceT > 0 || game.sp.invulnT > 0 || !!game.sp.knock;
+  function specialFx(name, x, y, follow) { game.sp.fx.push({ name, t: 0, x, y, follow: !!follow }); if (game.sp.fx.length > 24) game.sp.fx.shift(); }
   function multiplier() {
     const runM = game.golden ? CONFIG.golden.run.scoreMultiplier : 1;
-    const modeM = game.goldenModeT > 0 ? CONFIG.golden.mode.scoreMultiplier : 1;
+    const modeM = game.goldenModeT > 0 ? CONFIG.specials.rush.scoreMultiplier : 1;
     const m = runM * modeM;
     return CONFIG.golden.maxMultiplier != null ? Math.min(CONFIG.golden.maxMultiplier, m) : m;
   }
@@ -785,7 +1056,10 @@ window.ScoreService = ScoreService;
 
   function scheduleZoneEvent() {
     const def = CONFIG.events.list[stage().id];
-    game.eventNext = def ? { zone: stage().id, score: def.firesAt, def } : null;
+    let at = def ? def.firesAt : 0;
+    // v0.4.2: zone after a score-based launch: firesAt is relative to the pairs count at lift-off
+    if (def && stage().id === CONFIG.stages.loopFrom && game.spaceBasePairs != null) at = game.spaceBasePairs + (def.firesAfterLaunchPairs != null ? def.firesAfterLaunchPairs : def.firesAt - STAGES[stageIndexById(CONFIG.stages.loopFrom)].startAt);
+    game.eventNext = def ? { zone: stage().id, score: at, def } : null;
   }
 
   // Stage switch (visuals crossfade, event schedule, optional speed hold)
@@ -806,7 +1080,7 @@ window.ScoreService = ScoreService;
 
   function startBreather() {
     const T = CONFIG.stages.transition;
-    game.banner = { text: CONFIG.looks[stage().id].name, t: 0 };
+    game.banner = { text: CONFIG.looks[stage().id].name, t: 0, stage: stage().id, index: game.stageIndex };
     game.queue.length = 0; // drop leftover breathers; the transition is the breather
     game.easyLeft = T.easyPairs;
     game.skipSlots = T.emptySlots;
@@ -816,8 +1090,12 @@ window.ScoreService = ScoreService;
     game.state = 'ready';
     game.paused = false;
     game.newBest = false;
+    game.rank = 0;
+    game.death = null; game.deathObj = null;
+    game.player = ScoreService.getCurrentProfile().name;
     game.golden = forceGolden !== null ? forceGolden : (CONFIG.golden.run.enabled && Math.random() < CONFIG.golden.run.chance);
     game.goldenModeT = 0;
+    game.sp = newSpecials();
     game.firstPointGiven = false;
     Object.assign(game.ghost, { y: H / 2 - 40, vy: 0, tilt: 0, prevY: H / 2 - 40 });
     game.flapT = -1;
@@ -829,7 +1107,7 @@ window.ScoreService = ScoreService;
     game.pendingStage = null; game.banner = null; game.skipSlots = 0; game.easyLeft = 0;
     game.speedHoldPairsLeft = 0;
     game.event = null; game.eventDue = null; game.eventLog = [];
-    game.cutscene = null;
+    game.cutscene = null; game.launches = 0; game.launchWaitT = 0; game.spaceBasePairs = null; game.launchLog = []; // QA: every run can launch once
     game.tapCue = 0;
     game.pairsSincePickup = 0;
     game.forcePickupNext = qaPickup === '1';
@@ -1059,18 +1337,28 @@ window.ScoreService = ScoreService;
       bottom: resolveColumn(weightedPick(bottomWeights(st)), 'bottom'),
       pickup: null,
     };
-    // golden pickup roll
-    const P = pickupCfg();
-    game.pairsSincePickup++;
-    let pick = false;
-    if (qaPickup === 'all' || game.forcePickupNext) pick = true;
-    else if (game.pairs >= P.minScore && game.pairsSincePickup >= P.minPairsBetween &&
-             (Math.random() < P.chancePerPair || game.pairsSincePickup >= P.pityAfterPairs)) pick = true;
+    // v1.9 specials roll: one on screen, global gap, none during transition / event / launch or an active Rush / Chill
+    const SPc = CONFIG.specials, sp = game.sp;
+    for (const k of SPc.order) sp.since[k]++;
+    sp.sinceAny++;
+    const blocked = (SPc.onePerScreen && game.cols.some(c => c.pickup && !c.pickup.taken)) || transitionActive() || p.easy
+      || game.event || game.eventDue || game.cutscene || (SPc.noSpawnWhileActive && (game.goldenModeT > 0 || sp.slowT > 0 || sp.slowF < 1));
+    let pick = null;
+    if (!blocked) {
+      const forced = sp.force.length ? sp.force[0] : (qaPickup === 'all' || game.forcePickupNext ? 'rush' : null);
+      if (forced) { pick = forced; if (sp.force.length) sp.force.shift(); game.forcePickupNext = false; }
+      else if (sp.lastAny == null || sp.sinceAny >= SPc.minPairsBetweenAny) {
+        const due = SPc.order.map(k => [k, specialCfg(k)]).filter(([k, c]) => game.pairs >= c.fromPairs && (sp.last[k] == null || sp.since[k] >= c.minPairsBetween));
+        const pity = due.find(([k, c]) => sp.since[k] >= c.pityAfterPairs);
+        if (pity) pick = pity[0];
+        else for (const [k, c] of due) if (Math.random() < c.chancePerPair) { pick = k; break; }
+      }
+    }
     if (pick) {
-      p.pickup = { dx: CONFIG.tombstones.width / 2, y: p.centre, taken: false };
-      game.pairsSincePickup = 0;
-      game.forcePickupNext = false;
+      p.pickup = { type: pick, dx: CONFIG.tombstones.width / 2, y: p.centre, taken: false };
+      sp.since[pick] = 0; sp.last[pick] = game.pairs; sp.sinceAny = 0; sp.lastAny = game.pairs;
       game.stats.pickups++;
+      (game.stats.specials || (game.stats.specials = [])).push({ type: pick, pairs: game.pairs, slot: game.stats.pairs, stage: st.id, cutscene: !!game.cutscene, transition: transitionActive(), event: !!(game.event || game.eventDue) });
     }
     tryHazard(prev, p);
     game.cols.push(p);
@@ -1182,6 +1470,7 @@ window.ScoreService = ScoreService;
     const handler = EVENTS[ev.id];
     const G = CONFIG.ghost, tw = CONFIG.tombstones.width;
     ev.t += dt;
+    if (game.launches === 0 && game.stageIndex < stageIndexById(CONFIG.stages.loopFrom) && game.score >= CONFIG.launch.atScore) game.launchWaitT += dt / (game.sp.slowF || 1); // real seconds (Chill slows dt)
     if (ev.phase === 'waiting') {
       // fairness: start only once nothing is left ahead of the ghost
       const clear = game.cols.every(p => p.x + tw < G.x - hitboxRadius - 4) && game.hazards.every(h => h.x + h.r < G.x - hitboxRadius - 4);
@@ -1205,7 +1494,7 @@ window.ScoreService = ScoreService;
   // ---- Launch cutscene ------------------------------------------------------------------
   function startLaunch() {
     for (const p of game.cols) poof(p.x + CONFIG.tombstones.width / 2, p.centre);
-    for (const h of game.hazards) poof(h.x, hazardY(h, game.time));
+    for (const h of game.hazards) poof(h.x, hazardY(h, worldNow()));
     game.cols.length = 0; game.hazards.length = 0; game.queue.length = 0;
     game.pendingStage = null; game.skipSlots = 0; game.easyLeft = 0;
     if (game.event) { game.eventLog.push({ id: game.event.id, zone: game.event.zone, scheduled: game.event.scheduled, pairs: game.pairs, status: 'cancelled' }); game.event = null; }
@@ -1214,6 +1503,8 @@ window.ScoreService = ScoreService;
     game.cutscene = { t: 0, startY: game.ghost.y, switched: false, speeds: [], from: stage().id, smoke: [], smokeAcc: 0,
       clouds: Array.from({ length: CL.count }, (_, i) => ({ x: rand(-40, W - 120), at: i / CL.count, v: rand(CL.speedMin, CL.speedMax), kind: ['cloudA', 'cloudB', 'cloudC'][i % 3] })) };
     game.launches++;
+    game.spaceBasePairs = game.pairs;
+    game.launchLog.push({ score: game.score, pairs: game.pairs, from: stage().id, t: game.time });
     game.ghost.prevY = game.ghost.y;
     floatText(CONFIG.launch.achievement, W / 2, 150, CONFIG.colors.warning, 2);
   }
@@ -1276,9 +1567,16 @@ window.ScoreService = ScoreService;
   // ---- Progress checks (stage / launch / events) -------------------------------------------
   function checkProgress() {
     if (game.cutscene) return;
-    const target = stageIndexForPairs(game.pairs);
     const launchIdx = stageIndexById(CONFIG.stages.loopFrom);
-    if (launchIdx >= 0 && target === launchIdx && game.stageIndex < launchIdx && game.pairs >= CONFIG.launch.atScore) {
+    let target = stageIndexForPairs(game.pairs);
+    if (launchIdx >= 0 && target >= launchIdx) target = launchIdx - 1; // space is only ever reached by the launch
+    // v0.4.2: the launch fires once, when the displayed score reaches atScore (or pairs reach space.startAt),
+    // from whatever stage we're in (city may be skipped). An active event finishes first (bounded, real seconds).
+    const L = CONFIG.launch;
+    const due = L.trigger === 'score' ? (game.score >= L.atScore || game.pairs >= STAGES[launchIdx].startAt) : game.pairs >= L.atScore;
+    if (launchIdx >= 0 && game.stageIndex < launchIdx && game.launches === 0 && due) {
+      game.pendingStage = null; game.eventDue = null; game.eventNext = null; // no new stage/event before the launch
+      if (game.event && game.event.phase === 'active' && game.launchWaitT < L.eventFinishMaxSeconds) return; // updateEvent counts launchWaitT
       startLaunch(); return; // rocket launch into the final zone (pairs cleared, no waiting)
     }
     if (target > game.stageIndex && game.pendingStage == null) {
@@ -1304,7 +1602,9 @@ window.ScoreService = ScoreService;
     game.flapT = 0;
     game.tapCue = 0;
   }
+  function restartFrom() { return game.deadTime + (game.death ? game.death.seconds : 0); } // lockout starts when the anim ends
   function onPress() {
+    if (uiOpen()) return;
     if (game.state === 'loading') return;
     if (game.paused) { game.paused = false; lastT = performance.now(); return; }
     if (game.state === 'ready') {
@@ -1315,32 +1615,65 @@ window.ScoreService = ScoreService;
       if (game.cutscene) return; // taps ignored during the launch cutscene
       flap();
     } else if (game.state === 'over') {
-      if (game.time - game.deadTime >= CONFIG.ui.restartLockout) reset();
+      if (deathPlaying()) return; // v0.5: taps ignored during the death animation
+      if (game.time - restartFrom() >= CONFIG.ui.restartLockout) reset();
     }
   }
   canvas.addEventListener('pointerdown', e => { e.preventDefault(); onPress(); });
-  window.addEventListener('pointerdown', e => { if (e.target !== canvas) { e.preventDefault(); onPress(); } });
+  const inUi = e => !!(e.target && e.target.closest && e.target.closest('.gg-ui')); // v0.5 DOM overlay (profiles / top-10)
+  window.addEventListener('pointerdown', e => { if (e.target !== canvas && !inUi(e)) { e.preventDefault(); onPress(); } });
   window.addEventListener('keydown', e => {
+    if (inUi(e)) return;
     if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); if (!e.repeat) onPress(); }
   });
   ['touchstart', 'touchmove', 'gesturestart', 'dblclick', 'contextmenu'].forEach(t =>
-    window.addEventListener(t, e => e.preventDefault(), { passive: false }));
+    window.addEventListener(t, e => { if (!inUi(e)) e.preventDefault(); }, { passive: false }));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && game.state === 'playing') game.paused = true;
     lastT = performance.now();
   });
 
   // ---- Scoring / death --------------------------------------------------------------------
-  function die(cause) {
+  // v0.5 death animations (CONFIG.deathAnims): pure presentation, starts after the run has ended
+  function deathAnimFor(obj) {
+    const D = CONFIG.deathAnims;
+    const forced = qaDeath && (D.types[qaDeath] ? qaDeath : D.aliases[qaDeath]);
+    if (forced && D.types[forced]) return forced;
+    const id = CONFIG.objectAliases[obj] || obj;
+    const a = D.map[id] || (D.types[id] ? id : D.aliases[id]);
+    return D.types[a] ? a : D.fallback;
+  }
+  function startDeath(anim, obj) {
+    const D = CONFIG.deathAnims, T = D.types[anim];
+    const g = game.ghost;
+    game.death = { anim, obj: obj || null, golden: !!(game.golden || game.goldenModeT > 0), t: 0, seconds: Math.min(1.49, T.seconds), x: CONFIG.ghost.x, y: g.y, tilt: g.tilt, parts: [] };
+    const d = game.death;
+    if (anim === 'meteor') for (let i = 0; i < 10; i++) d.parts.push({ x: d.x + rand(-10, 10), y: d.y + rand(-10, 10), vx: rand(-25, 25), vy: rand(-70, -20), r: rand(5, 10), life: rand(0.6, 1.2) });
+    if (anim === 'generic') for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; d.parts.push({ x: d.x, y: d.y, vx: Math.cos(a) * rand(60, 110), vy: Math.sin(a) * rand(60, 110), r: rand(5, 9), life: rand(0.5, 0.8) }); }
+    if (anim === 'pumpkin') for (let i = 0; i < 6; i++) d.parts.push({ x: d.x + rand(-14, 14), y: d.y + 10, vx: rand(-80, 80), vy: rand(-90, -30), r: rand(2, 4), life: 0.7 });
+  }
+  function updateDeath(dt) {
+    const d = game.death;
+    if (!d) return;
+    d.t = Math.min(d.seconds, d.t + dt);
+    for (const q of d.parts) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += (d.anim === 'meteor' ? -10 : 160) * dt; }
+    d.parts = d.parts.filter(q => q.life > 0);
+  }
+  const deathPlaying = () => !!(game.death && game.death.t < game.death.seconds);
+  function die(cause, obj) {
     if (game.god) { if (!game.hits.length || game.time - game.hits[game.hits.length - 1].t > 0.3) game.hits.push({ cause, t: game.time, pairs: game.pairs, stage: stage().id, cutscene: !!game.cutscene }); return; }
+    if (game.state === 'playing' && game.sp.lifeHeld > 0) { useExtraLife(cause, obj); return; }
     game.state = 'over';
     game.deadTime = game.time;
     game.flash = 1;
     game.deathCause = cause;
+    game.deathObj = obj || null;
+    startDeath(deathAnimFor(obj || cause), obj);
     if (game.event) { game.eventLog.push({ id: game.event.id, zone: game.event.zone, scheduled: game.event.scheduled, pairs: game.pairs, status: 'died' }); }
     const res = SS.onGameOver(game.score, { golden: game.golden, stage: stage().id });
-    game.best = res.best;
+    game.best = res.best; game.player = res.player; // the run belongs to whoever was selected when it ended
     game.newBest = res.newBest;
+    game.rank = res.rank;
   }
   function addPoint() {
     let pts = CONFIG.scoring.perPair * multiplier();
@@ -1349,19 +1682,67 @@ window.ScoreService = ScoreService;
     game.score += pts;
     game.pairs += 1; // progression counter: one per pair, regardless of bonuses
   }
+  function useExtraLife(cause, obj) { // v1.9.1: heart pops, knocked to the nearest gap centre over 0.3 s, vy 0, then 1.5 s invulnerable
+    const sp = game.sp, g = game.ghost, O = CONFIG.specials.extraLife.onHit, G = CONFIG.ghost, tw = CONFIG.tombstones.width;
+    sp.lifeHeld--;
+    let best = null;
+    for (const p of game.cols) { const d = Math.abs(p.x + tw / 2 - G.x); if (!best || d < best.d) best = { d, y: p.centre }; }
+    const toY = (best ? best.y : (centreRange().min + centreRange().max) / 2) - hitboxOffsetY;
+    sp.knock = { t: 0, from: g.y, to: toY };
+    g.vy = O.vyAfter;
+    sp.saves.push({ cause, obj: obj || null, pairs: game.pairs, t: game.time, toY });
+    specialFx('heartBreak', G.x, g.y, true);
+    game.flash = 0.6;
+  }
   function collectPickup(p) {
-    const P = pickupCfg();
+    const SPc = CONFIG.specials, sp = game.sp, type = p.pickup.type || 'rush', C = SPc[type], G = CONFIG.ghost, col = SPc.art.placeholder[type];
     p.pickup.taken = true;
     game.stats.pickupsTaken++;
-    const onRun = game.golden && CONFIG.golden.pickupOnGoldenRun === 'doubleInstant';
-    const pts = P.instantPoints * (onRun ? 2 : 1);
-    game.score += pts;
-    if (!onRun) {
-      const M = CONFIG.golden.mode;
-      game.goldenModeT = M.extendOnPickup ? game.goldenModeT + M.seconds : Math.max(game.goldenModeT, M.seconds);
+    let pts = C.instantPoints, label = '';
+    if (type === 'rush') {
+      if (game.golden && CONFIG.golden.pickupOnGoldenRun === 'doubleInstant') pts *= 2;
+      game.goldenModeT += C.seconds; sp.graceT = 0; label = '  Rush!';
+    } else if (type === 'extraLife') {
+      if (sp.lifeHeld >= C.maxHeld) pts = C.pointsIfAlreadyHeld; else { sp.lifeHeld++; label = '  +1 life'; }
+      specialFx('heartPop', G.x, game.ghost.y, true);
+    } else {
+      sp.slowT += C.seconds; label = '  Chill!';
+      specialFx('frostBurst', G.x, game.ghost.y, true);
     }
-    floatText(`+${pts}${onRun ? '' : '  x2!'}`, CONFIG.ghost.x + 30, p.pickup.y - 30, CONFIG.colors.ghostGolden);
+    game.score += pts;
+    sp.collected.push({ type, pts, pairs: game.pairs, t: game.time, score: game.score });
+    floatText(`+${pts}${label}`, G.x + 30, p.pickup.y - 30, col);
     for (let i = 0; i < 12; i++) game.sparkles.push({ x: p.x + p.pickup.dx, y: p.pickup.y, vx: rand(-90, 90), vy: rand(-90, 90), life: CONFIG.golden.sparkleLife });
+  }
+  function smash(x, y) { // Rush: obstacle bursts into candy, +smashBonus on top of the pair point
+    const sp = game.sp; sp.smashed++;
+    game.score += CONFIG.specials.rush.smashBonus;
+    specialFx('candyBurst', x, y, false);
+    floatText(`+${CONFIG.specials.rush.smashBonus}`, x, y - 20, CONFIG.specials.art.placeholder.rush);
+  }
+  function updateSpecials(dt) { // real-time timers (the ghost's own clock)
+    const sp = game.sp, SPc = CONFIG.specials, M = SPc.slowMo, R = SPc.rush, g = game.ghost;
+    if (sp.slowT > 0) sp.slowT = Math.max(0, sp.slowT - dt);
+    const tgt = sp.slowT > 0 ? M.worldScale : 1, rate = (1 - M.worldScale) / M.rampSeconds;
+    sp.slowF = sp.slowF < tgt ? Math.min(tgt, sp.slowF + rate * dt) : Math.max(tgt, sp.slowF - rate * dt);
+    sp.frostA = clamp(sp.frostA + (sp.slowT > 0 ? 1 : -1) * dt / M.overlayFadeSeconds, 0, 1);
+    if (game.goldenModeT > 0) { game.goldenModeT = Math.max(0, game.goldenModeT - dt); if (game.goldenModeT === 0) sp.graceT = R.graceSeconds; }
+    else if (sp.graceT > 0) sp.graceT = Math.max(0, sp.graceT - dt);
+    if (sp.invulnT > 0) sp.invulnT = Math.max(0, sp.invulnT - dt);
+    const st = game.goldenModeT > 0 ? R.forwardShift : 0, sr = R.forwardShift / R.shiftEaseSeconds;
+    sp.shift = sp.shift < st ? Math.min(st, sp.shift + sr * dt) : Math.max(st, sp.shift - sr * dt);
+    if (sp.knock) {
+      const O = SPc.extraLife.onHit, k = sp.knock; k.t += dt;
+      const u = Math.min(1, k.t / O.knockSeconds), e = u * u * (3 - 2 * u);
+      g.y = g.prevY = k.from + (k.to - k.from) * e; g.vy = O.vyAfter; game.physAcc = 0;
+      if (u >= 1) { sp.knock = null; sp.invulnT = O.invulnSeconds; const sv = sp.saves[sp.saves.length - 1]; if (sv) { sv.endY = g.y; sv.endT = game.time; } }
+    }
+    for (const f of sp.fx) f.t += dt;
+    sp.fx = sp.fx.filter(f => f.t < CONFIG.specials.art.fxSeconds);
+    const FL = M.flakes;
+    if (sp.frostA > 0 && effectsOn) { sp.flakeAcc += dt * FL.perSecond * sp.frostA; while (sp.flakeAcc >= 1 && sp.flakes.length < FL.max) { sp.flakeAcc -= 1; sp.flakes.push({ x: rand(0, W), y: -10, vy: rand(FL.fallMin, FL.fallMax), rot: rand(0, 360), spin: rand(FL.spinMin, FL.spinMax) * (Math.random() < 0.5 ? -1 : 1), k: Math.floor(rand(0, 3)), ph: rand(0, TAU) }); } }
+    for (const f of sp.flakes) { f.y += f.vy * dt; f.rot += f.spin * dt; }
+    sp.flakes = sp.flakes.filter(f => f.y < GROUND_Y + 10);
   }
 
   // ---- Update -------------------------------------------------------------------------------
@@ -1383,13 +1764,19 @@ window.ScoreService = ScoreService;
       game.dist += CONFIG.speed.start * dt;
       return;
     }
-    if (game.state === 'over') return;
+    if (game.state === 'over') { updateDeath(dt); return; }
 
     // --- playing ---
-    const speed = (game.speed = currentSpeed());
-    game.dist += speed * dt;
+    const speed = (game.speed = currentSpeed()); // progression speed (speedFor by pairs, never paused)
+    updateSpecials(dt);
+    const wdt = game.cutscene ? dt : dt * game.sp.slowF; // Chill slows the WORLD only; ghost physics stay on real dt
+    game.sp.lag += dt - wdt;
+    game.worldSpeed = speed * (dt ? wdt / dt : 1);
+    game.dist += speed * wdt;
     if (game.cutscene) {
       updateCutscene(dt);
+    } else if (game.sp.knock) {
+      // Extra Life knock-back owns the ghost's y for 0.3 s (vy 0); normal physics resume afterwards
     } else {
       // fixed-timestep vertical physics (QA P2): identical flap at 30/60/120 Hz
       const ph = physics(), STEP = 1 / CONFIG.world.physicsHz;
@@ -1405,24 +1792,24 @@ window.ScoreService = ScoreService;
       g.tilt += (targetTilt - g.tilt) * Math.min(1, G.tiltLerp * dt);
     }
 
-    for (const p of game.cols) p.x -= speed * dt;
-    for (const h of game.hazards) h.x -= speed * dt;
+    for (const p of game.cols) p.x -= speed * wdt;
+    for (const h of game.hazards) h.x -= speed * wdt;
     while (game.cols.length && game.cols[0].x + tw < -20) game.cols.shift();
     while (game.hazards.length && game.hazards[0].x + game.hazards[0].r < -20) game.hazards.shift();
-    if (game.slotX !== null) game.slotX -= speed * dt;
+    if (game.slotX !== null) game.slotX -= speed * wdt;
 
     if (!game.cutscene) {
       // spawning
       if (!game.event) {
         if (game.slotX === null) {
-          game.spawnTimer -= dt;
+          game.spawnTimer -= wdt;
           if (game.spawnTimer <= 0) spawnSlot(W + CONFIG.tombstones.spawnMargin);
         } else {
           const spacing = spacingFor(game.pairs) + (peekEntry().spacingDelta || 0);
           if (game.slotX + spacing <= W + CONFIG.tombstones.spawnMargin) spawnSlot(game.slotX + spacing);
         }
       }
-      updateEvent(dt);
+      updateEvent(wdt);
 
       // scoring + collisions
       const r = hitboxRadius, hy = g.y + hitboxOffsetY;
@@ -1432,22 +1819,33 @@ window.ScoreService = ScoreService;
           const dx = G.x - (p.x + p.pickup.dx), dy = hy - p.pickup.y, rr = pickupCfg().radius + r;
           if (dx * dx + dy * dy < rr * rr) collectPickup(p);
         }
-        if (pairHits(p, G.x, hy, r)) { die('column'); if (game.state !== 'playing') return; }
+        if (!p.smashed && pairHits(p, G.x, hy, r)) {
+          if (game.goldenModeT > 0) { p.smashed = true; smash(p.x + tw / 2, hy); continue; }
+          if (specialSafe()) continue;
+          const hitTop = hitsShapes(columnHitboxes(p, 'top'), G.x, hy, r);
+          die('column', (hitTop ? p.top : p.bottom).id); if (game.state !== 'playing') return;
+        }
       }
       for (const h of game.hazards) {
-        const dx = G.x - h.x, dy = hy - hazardY(h, game.time), rr = h.r + r;
-        if (dx * dx + dy * dy < rr * rr) { die('hazard:' + h.type); if (game.state !== 'playing') return; }
+        if (h.smashed) continue;
+        const dx = G.x - h.x, dy = hy - hazardY(h, worldNow()), rr = h.r + r;
+        if (dx * dx + dy * dy < rr * rr) {
+          if (game.goldenModeT > 0) { h.smashed = true; smash(h.x, hazardY(h, worldNow())); continue; }
+          if (specialSafe()) continue;
+          die('hazard:' + h.type, h.type); if (game.state !== 'playing') return;
+        }
       }
-      if (game.event && game.event.phase === 'active' && EVENTS[game.event.id].hits(game.event, G.x, hy, r)) {
-        die('event:' + game.event.id); if (game.state !== 'playing') return;
+      if (game.event && game.event.phase === 'active' && !specialSafe() && EVENTS[game.event.id].hits(game.event, G.x, hy, r)) {
+        die('event:' + game.event.id, game.event.id); if (game.state !== 'playing') return;
       }
-      if (hy - r <= 0 || hy + r >= GROUND_Y) {
+      if ((hy - r <= 0 || hy + r >= GROUND_Y) && specialSafe()) { // Rush: floor/ceiling safe; grace / invuln: no death
+        g.y = g.prevY = clamp(hy, r + 1, GROUND_Y - r - 1) - hitboxOffsetY; if ((hy - r <= 0 && g.vy < 0) || (hy + r >= GROUND_Y && g.vy > 0)) g.vy = 0;
+      } else if (hy - r <= 0 || hy + r >= GROUND_Y) {
         if (!game.god) g.y = g.prevY = clamp(hy, r, GROUND_Y - r) - hitboxOffsetY;
         else { g.y = g.prevY = clamp(g.y, r - hitboxOffsetY + 1, GROUND_Y - r - hitboxOffsetY - 1); g.vy = 0; }
-        die(hy - r <= 0 ? 'ceiling' : 'ground');
+        die(hy - r <= 0 ? 'ceiling' : 'ground', hy - r <= 0 ? 'ceiling' : 'ground');
         if (game.state !== 'playing') return;
       }
-      if (game.goldenModeT > 0) game.goldenModeT = Math.max(0, game.goldenModeT - dt);
     }
     checkProgress();
 
@@ -1720,13 +2118,15 @@ window.ScoreService = ScoreService;
           if (!sprites.bg[keyA]) keyA = `${id}-${layer}`;
         } else if (st.fade && sprites.bg[`${st.fade.from}-${layer}`]) { keyA = `${st.fade.from}-${layer}`; keyB = `${id}-${layer}`; a = easeInOut(Math.min(1, st.fade.t)); }
         else keyA = `${id}-${layer}`;
+        // v0.5 parallax swap: the incoming layer eases up into place while it fades in (no hard cut)
+        const slide = keyB ? Math.round(((CONFIG.transitions.swap.slide[layer] || 0) * (1 - a)) * m.d) : 0;
         for (const [key, al] of keyB ? [[keyA, 1], [keyB, a]] : [[keyA, 1]]) {
-          const e = getLayer(key);
-          if (e) { blit(e, dx, Math.round(m.f + e.y0 * m.d), al); continue; }
+          const e = getLayer(key), yOff = key === keyB ? slide : 0;
+          if (e) { blit(e, dx, Math.round(m.f + e.y0 * m.d) + yOff, al); continue; }
           // not cached yet (first frames, or right after a resize): draw straight from the source image
           const img = sprites.bg[key];
           ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); if (al < 1) ctx.globalAlpha *= al;
-          ctx.drawImage(img, dx, Math.round(m.f), tw, Math.round(H * m.d)); ctx.restore();
+          ctx.drawImage(img, dx, Math.round(m.f) + yOff, tw, Math.round(H * m.d)); ctx.restore();
           game.stats.directDraws = (game.stats.directDraws || 0) + 1;
           if (DEBUG) { const d = game.stats.directLog = game.stats.directLog || {}; d[key] = (d[key] || 0) + 1; }
         }
@@ -1953,7 +2353,11 @@ window.ScoreService = ScoreService;
         ctx.fillStyle = t.bodyPattern; ctx.fillRect(L.sx, y0, w, y1 - y0);
       } else {
         const m2 = ctx.getTransform(), sn = y => (Math.round(y * m2.d + m2.f) - m2.f) / m2.d; // integer device-px tiles, no fractional seams
+        // QA R1 (v0.4.1): clip to the body range so whole 64 px tiles never draw under/through the cap
+        ctx.save(); ctx.beginPath(); ctx.rect(L.sx, y0, w, y1 - y0); ctx.clip();
         for (let y = originY + Math.floor((y0 - originY) / bodyH) * bodyH; y < y1; y += bodyH) { const a = sn(y), b = sn(y + bodyH); ctx.drawImage(t.body, L.sx, a, w, b - a + 1 / m2.d); }
+        ctx.restore();
+        game.stats.bodyFallbackDraws = (game.stats.bodyFallbackDraws || 0) + 1;
       }
     };
     // QA seam fix: snap the cap's edges to whole device pixels and run the body 1 device px under the cap,
@@ -1985,6 +2389,7 @@ window.ScoreService = ScoreService;
     for (const p of game.cols) {
       for (const side of ['top', 'bottom']) {
         const col = side === 'top' ? p.top : p.bottom;
+        if (p.smashed) continue; // Rush: burst into candy
         if (col.set) drawSpriteColumn(p, side); else drawShapeColumn(p, side);
       }
     }
@@ -1993,7 +2398,8 @@ window.ScoreService = ScoreService;
   // ---- Hazards / pickups / events --------------------------------------------------------------
   function drawHazards() {
     for (const h of game.hazards) {
-      const y = hazardY(h, game.time), sh = sprites.sheets[h.type];
+      if (h.smashed) continue;
+      const y = hazardY(h, worldNow()), sh = sprites.sheets[h.type];
       if (sh) {
         const j = sh.json, cx = j.cx != null ? j.cx : sh.def.w / 2, cy = j.cy != null ? j.cy : sh.def.h / 2;
         if (h.cfg.spin) { ctx.save(); ctx.translate(h.x, y); ctx.rotate(game.time * (h.cfg.spinSpeed || 1.5) + h.phase); drawSheet(h.type, -cx, -cy, game.time, { phase: h.phase }); ctx.restore(); }
@@ -2028,17 +2434,67 @@ window.ScoreService = ScoreService;
       ctx.restore();
     }
   }
-  function drawPickups() {
+  function drawStrip(key, frames, fps, t, x, y, w, h, once) { // logical-px draw of a horizontal strip; false if not loaded
+    const img = sprites.specials[key]; if (!img) return false;
+    const n = Math.max(1, frames), fr = Math.floor(t * fps), f = once ? Math.min(n - 1, fr) : fr % n, fw = img.width / n;
+    ctx.drawImage(img, f * fw, 0, fw, img.height, x, y, w, h); return true;
+  }
+  function drawPickups() { // v1.9 specials: Art token strips, placeholder orb otherwise
+    const SA = CONFIG.specials.art, PK = SA.pickup;
     for (const p of game.cols) {
       if (!p.pickup || p.pickup.taken) continue;
-      const x = p.x + p.pickup.dx, y = p.pickup.y;
-      const nm = stage().id === 'space' && sprites.sheets.goldenPickupSpace ? 'goldenPickupSpace' : 'goldenPickup', sh = sprites.sheets[nm];
-      if (sh) { const j = sh.json; drawSheet(nm, x - (j.cx || 28), y - (j.cy || 28), game.time); continue; }
-      const size = CONFIG.golden.pickup.drawSize, strip = sprites.ghost.golden;
-      ctx.fillStyle = 'rgba(255, 224, 138, 0.3)'; ctx.beginPath(); ctx.arc(x, y, size * 0.55 + Math.sin(game.time * 5) * 2, 0, TAU); ctx.fill();
-      if (strip) { const fs = A.ghost.frameSize * sprites.res; ctx.drawImage(strip, 0, 0, fs, fs, x - size / 2, y - size / 2 + Math.sin(game.time * 4) * 2, size, size); }
-      else { ctx.fillStyle = CONFIG.colors.ghostGolden; ctx.beginPath(); ctx.arc(x, y, CONFIG.golden.pickup.radius, 0, TAU); ctx.fill(); }
+      const x = p.x + p.pickup.dx, y = p.pickup.y, type = p.pickup.type || 'rush', sz = PK.size;
+      if (drawStrip('pickup-' + type, PK.frames, PK.fps, game.time, x - sz / 2, y - sz / 2, sz, sz)) continue;
+      const c = SA.placeholder[type];
+      ctx.globalAlpha = 0.3; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, sz * 0.5 + Math.sin(game.time * 5) * 2, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y + Math.sin(game.time * 4) * 2, CONFIG.specials.radius, 0, TAU); ctx.fill();
     }
+  }
+  function drawSpecialFx() { // candy bursts (world), heart pop/break + frost burst (on the ghost)
+    const SA = CONFIG.specials.art, G = CONFIG.ghost, k = G.size / 64;
+    for (const f of game.sp.fx) {
+      const A2 = SA[f.name], cx = f.follow ? G.x + game.sp.shift : f.x, cy = f.follow ? game.ghost.y : f.y;
+      const w = A2.w * (f.follow ? k : 1), h = A2.h * (f.follow ? k : 1);
+      if (drawStrip(f.name, A2.frames, A2.fps, f.t, cx - w / 2, cy - h / 2, w, h, true)) continue;
+      const u = f.t / 0.5, col = f.name === 'candyBurst' ? SA.placeholder.rush : f.name === 'frostBurst' ? SA.placeholder.slowMo : SA.placeholder.extraLife;
+      ctx.globalAlpha = 1 - u; ctx.fillStyle = col;
+      for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 40 * u, cy + Math.sin(a) * 40 * u, 5, 0, TAU); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    }
+  }
+  function drawFrost() { // Chill: #BFE6FF tint + Art vignette fading with sp.frostA; falling flakes
+    const sp = game.sp, M = CONFIG.specials.slowMo, SA = CONFIG.specials.art;
+    if (sp.frostA <= 0 && !sp.flakes.length) return;
+    if (sp.frostA > 0) {
+      ctx.globalAlpha = M.tintAlpha * sp.frostA; ctx.fillStyle = M.tint; ctx.fillRect(0, 0, W, H);
+      const v = sprites.specials.frostVignette; ctx.globalAlpha = sp.frostA;
+      if (v) ctx.drawImage(v, 0, 0, W, H);
+      else { const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.62); g.addColorStop(0, 'rgba(191,230,255,0)'); g.addColorStop(1, 'rgba(230,246,255,0.55)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+      ctx.globalAlpha = 1;
+    }
+    const fs = SA.flakeSize;
+    for (const f of sp.flakes) {
+      const img = sprites.specials['flake-' + f.k], x = f.x + Math.sin(f.y / 30 + f.ph) * M.flakes.sway;
+      ctx.save(); ctx.translate(x, f.y); ctx.rotate(f.rot * Math.PI / 180); ctx.globalAlpha = Math.max(0.3, sp.frostA);
+      if (img) ctx.drawImage(img, -fs / 2, -fs / 2, fs, fs); else { ctx.fillStyle = '#E6F6FF'; ctx.fillRect(-2, -2, 4, 4); }
+      ctx.restore();
+    }
+  }
+  function drawSpecialHud() { // one icon per active type with a timer ring (life: held marker)
+    const SPc = CONFIG.specials, SA = SPc.art, sp = game.sp, sz = SA.hud.size;
+    const items = [];
+    if (game.goldenModeT > 0) items.push(['rush', game.goldenModeT / SPc.rush.seconds]);
+    if (sp.slowT > 0) items.push(['slowMo', sp.slowT / SPc.slowMo.seconds]);
+    if (sp.lifeHeld > 0) items.push(['extraLife', null]);
+    game.stats.hud = items.map(i => [i[0], i[1] == null ? null : +i[1].toFixed(3)]);
+    items.forEach(([type, f], i) => {
+      const cx = W / 2 - (items.length - 1) * 20 + i * 40, cy = 112, r = sz / 2 + 3;
+      ctx.fillStyle = 'rgba(30,20,51,0.6)'; ctx.beginPath(); ctx.arc(cx, cy, r + 2, 0, TAU); ctx.fill();
+      if (f != null) { ctx.strokeStyle = SA.placeholder[type]; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, f)); ctx.stroke(); }
+      const img = sprites.specials['hud-' + type];
+      if (img) ctx.drawImage(img, cx - sz / 2, cy - sz / 2, sz, sz);
+      else { ctx.fillStyle = SA.placeholder[type]; ctx.beginPath(); ctx.arc(cx, cy, sz / 2 - 3, 0, TAU); ctx.fill(); }
+    });
   }
   function drawEvent() {
     const ev = game.event;
@@ -2169,17 +2625,29 @@ window.ScoreService = ScoreService;
     const cs = game.cutscene;
     if (cs && cs.ghostHidden) return;
     ctx.save();
-    ctx.translate(cs && cs.gx != null ? cs.gx : G.x, y);
+    const sp = game.sp, SA = CONFIG.specials.art, k = s / 64;
+    if (game.state === 'playing' && (sp.graceT > 0 || sp.invulnT > 0 || sp.knock) && Math.floor(game.time * CONFIG.specials.extraLife.blinkHz) % 2) ctx.globalAlpha = 0.35;
+    ctx.translate(cs && cs.gx != null ? cs.gx : G.x + sp.shift, y);
+    if (game.goldenModeT > 0 && !cs) drawStrip('rushAura', SA.rushAura.frames, SA.rushAura.fps, game.time, (-32 + SA.rushAura.dx) * k, (-32 + SA.rushAura.dy) * k, SA.rushAura.w * k, SA.rushAura.h * k);
     if (cs && cs.ghostScale != null) ctx.scale(Math.max(0.01, cs.ghostScale), Math.max(0.01, cs.ghostScale));
     ctx.rotate(g.tilt * Math.PI / 180);
+    const AG = A.ghost;
+    let name;
+    if (game.state === 'over') name = AG.deadFrame;
+    else if (game.flapT >= 0) name = AG.flapFrames[Math.min(AG.flapFrames.length - 1, Math.floor(game.flapT * AG.flapFps))];
+    else name = AG.idleFrames[Math.floor(game.time * AG.idleFps) % AG.idleFrames.length];
+    const R = SA.ghostRush;
+    if (!(game.goldenModeT > 0 && !cs && game.state === 'playing' && drawStrip('ghostRush', R.frames, R.fps, game.time, (-32 + R.dx) * k, (-32 + R.dy) * k, R.w * k, R.h * k))) drawGhostBody(name);
+    if (sp.lifeHeld > 0) { const Hh = SA.heart;
+      if (!drawStrip('heart', Hh.frames, Hh.fps, game.time, (-32 + Hh.dx) * k, (-32 + Hh.dy) * k, Hh.w * k, Hh.h * k)) { ctx.fillStyle = SA.placeholder.extraLife; ctx.beginPath(); ctx.arc((-32 + Hh.dx + 10) * k, (-32 + Hh.dy + 10) * k, 7 * k, 0, TAU); ctx.fill(); } }
+    ctx.restore();
+  }
+  function drawGhostBody(name, eyes) { // ghost centred on the current transform origin
+    const G = CONFIG.ghost, s = G.size;
     const golden = game.golden || game.goldenModeT > 0;
     const strip = golden ? sprites.ghost.golden : sprites.ghost.normal;
     if (strip) {
       const AG = A.ghost, k = s / AG.frameSize, fs = AG.frameSize * sprites.res;
-      let name;
-      if (game.state === 'over') name = AG.deadFrame;
-      else if (game.flapT >= 0) name = AG.flapFrames[Math.min(AG.flapFrames.length - 1, Math.floor(game.flapT * AG.flapFps))];
-      else name = AG.idleFrames[Math.floor(game.time * AG.idleFps) % AG.idleFrames.length];
       const idx = Math.max(0, AG.frameOrder.indexOf(name));
       ctx.drawImage(strip, idx * fs, 0, fs, fs, -AG.anchor[0] * k, -AG.anchor[1] * k, AG.frameSize * k, AG.frameSize * k);
     } else {
@@ -2189,10 +2657,132 @@ window.ScoreService = ScoreService;
       ctx.beginPath(); ctx.moveTo(-hw, 2); ctx.arc(0, 2, hw, Math.PI, 0); ctx.lineTo(hw, hw);
       for (let i = 0; i < 4; i++) { const x0 = hw - i * (hw / 2); ctx.quadraticCurveTo(x0 - hw / 4, hw + 6, x0 - hw / 2, hw); }
       ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = CONFIG.colors.eye;
-      for (const ex of [-7, 7]) { ctx.beginPath(); ctx.ellipse(ex, 1, 3, 4, 0, 0, TAU); ctx.fill(); }
-      ctx.fillStyle = CONFIG.colors.blush; ctx.globalAlpha = 0.8;
-      ctx.beginPath(); ctx.ellipse(-12, 8, 3.5, 2.2, 0, 0, TAU); ctx.ellipse(12, 8, 3.5, 2.2, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+      if (eyes !== 'x') {
+        ctx.fillStyle = CONFIG.colors.eye;
+        for (const ex of [-7, 7]) { ctx.beginPath(); ctx.ellipse(ex, 1, 3, 4, 0, 0, TAU); ctx.fill(); }
+      }
+      ctx.fillStyle = CONFIG.colors.blush; ctx.globalAlpha *= 0.8;
+      ctx.beginPath(); ctx.ellipse(-12, 8, 3.5, 2.2, 0, 0, TAU); ctx.ellipse(12, 8, 3.5, 2.2, 0, 0, TAU); ctx.fill(); ctx.globalAlpha /= 0.8;
+    }
+    if (eyes === 'x') { // x_x eyes over whatever the body drew
+      const k = s / 64;
+      ctx.fillStyle = CONFIG.colors.ghostBody;
+      for (const ex of [-7, 7]) { ctx.beginPath(); ctx.ellipse(ex * k, 1 * k, 4.5 * k, 5.5 * k, 0, 0, TAU); ctx.fill(); }
+      ctx.strokeStyle = CONFIG.colors.eye; ctx.lineWidth = 2.2 * k; ctx.lineCap = 'round';
+      for (const ex of [-7, 7]) { ctx.beginPath(); ctx.moveTo((ex - 3.5) * k, -2.5 * k); ctx.lineTo((ex + 3.5) * k, 4.5 * k); ctx.moveTo((ex + 3.5) * k, -2.5 * k); ctx.lineTo((ex - 3.5) * k, 4.5 * k); ctx.stroke(); }
+    }
+  }
+
+  // ---- v0.5 death animations (placeholders until Art's death-<type>-<n> strips land) ----------
+  function drawStar5(x, y, r, rot) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const a = rot + i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+    ctx.closePath(); ctx.fill();
+  }
+  function drawBatShape(x, y, t, scale = 1) {
+    if (drawSheet('bat', x - 24 * scale, y - 24 * scale, t, { w: 48 * scale, h: 48 * scale })) return;
+    const flapA = Math.sin(t * 22) * 0.6;
+    ctx.fillStyle = CONFIG.deathAnims.colors.bat;
+    for (const dir of [-1, 1]) { ctx.save(); ctx.translate(x, y); ctx.scale(dir * scale, scale); ctx.rotate(flapA); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(14, -16, 26, -4); ctx.quadraticCurveTo(18, -2, 16, 6); ctx.quadraticCurveTo(8, 2, 0, 6); ctx.fill(); ctx.restore(); }
+    ctx.beginPath(); ctx.ellipse(x, y + 2 * scale, 7 * scale, 9 * scale, 0, 0, TAU); ctx.fill();
+  }
+  function drawFx(name, x, y, f, scale = 1) { // fx strip frame f at top-left x,y (logical px)
+    const img = sprites.fx[name], F = CONFIG.deathAnims.fx[name];
+    if (!img) return false;
+    const r = sprites.res;
+    ctx.drawImage(img, f * F.w * r, 0, F.w * r, F.h * r, x, y, F.w * scale, F.h * scale);
+    return true;
+  }
+  function drawDeath() {
+    const d = game.death, D = CONFIG.deathAnims, G = CONFIG.ghost;
+    const u = d.t / d.seconds, t = d.t;
+    const T = D.types[d.anim], strip = (d.golden && sprites.death[d.anim + ':golden']) || sprites.death[d.anim];
+    game.stats.deathDraws = (game.stats.deathDraws || 0) + 1;
+    if (strip && T.frames) { // Art strip: 128x128 frames, anchor [64,64] = ghost anchor; play once, hold (or loop) the last
+      let f = Math.floor(t * D.fps);
+      if (f >= T.frames) f = T.loop ? T.loop[0] + (f - T.loop[0]) % (T.loop[1] - T.loop[0] + 1) : T.frames - 1;
+      const k = G.size / A.ghost.frameSize, fs = D.frameSize * sprites.res, lastT = (T.frames - 1) / D.fps;
+      const a = T.fadeLast && t > lastT ? Math.max(0, 1 - (t - lastT) / Math.max(0.05, d.seconds - lastT)) : 1;
+      ctx.save(); ctx.globalAlpha *= a;
+      ctx.drawImage(strip, f * fs, 0, fs, fs, d.x - D.anchor[0] * k, d.y - D.anchor[1] * k, D.frameSize * k, D.frameSize * k);
+      ctx.restore();
+      game.stats.deathSource = d.golden && sprites.death[d.anim + ':golden'] ? 'art-golden' : 'art'; game.stats.deathFrame = f;
+      return;
+    }
+    game.stats.deathSource = 'placeholder';
+    const C = D.colors;
+    ctx.save();
+    switch (d.anim) {
+      case 'bat': { // grabbed (short struggle), then carried off up and away
+        const lift = u < 0.2 ? 0 : easeIn((u - 0.2) / 0.8);
+        const x = d.x + lift * 70 + (u < 0.2 ? Math.sin(t * 60) * 2 : 0), y = d.y - lift * (d.y + 90);
+        ctx.translate(x, y); ctx.rotate((u < 0.2 ? Math.sin(t * 40) * 0.15 : -0.25) + 0);
+        drawGhostBody('idle-1');
+        ctx.restore(); ctx.save();
+        drawBatShape(x, y - 30, t, 1.2);
+        break;
+      }
+      case 'pumpkin': { // pumpkin drops on the ghost, squash + splat
+        const drop = Math.min(1, u / 0.25), sq = u < 0.25 ? 0 : easeOut(Math.min(1, (u - 0.25) / 0.2));
+        const sy = 1 - 0.72 * sq, sx = 1 + 0.6 * sq, base = d.y + G.size * 0.32;
+        ctx.translate(d.x, base); ctx.scale(sx, sy); ctx.translate(0, -G.size * 0.32);
+        drawGhostBody('idle-1', sq > 0.5 ? 'x' : null);
+        ctx.restore(); ctx.save();
+        const py = lerp(d.y - 220, base - G.size * 0.32 * sy * 2 - 12, easeIn(drop)) + (sq ? Math.sin(sq * Math.PI) * -6 : 0);
+        if (!drawSheet('pumpkin', d.x - 22, py - 22, 0, { w: 44, h: 44 })) {
+          ctx.fillStyle = CONFIG.colors.pumpkin; ctx.beginPath(); ctx.ellipse(d.x, py, 22, 18, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = CONFIG.colors.pumpkinStem; ctx.fillRect(d.x - 3, py - 24, 6, 8);
+        }
+        ctx.fillStyle = CONFIG.colors.pumpkin;
+        for (const q of d.parts) { ctx.globalAlpha = Math.max(0, q.life / 0.7); ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, TAU); ctx.fill(); }
+        break;
+      }
+      case 'meteor': { // sooty frazzle + rising smoke
+        const shake = (1 - u) * 3 * Math.sin(t * 50);
+        ctx.translate(d.x + shake, d.y);
+        drawGhostBody('idle-1', u > 0.15 ? 'x' : null);
+        ctx.globalAlpha = Math.min(0.75, u * 3); ctx.fillStyle = C.soot; // soot blotches
+        for (const [bx, by, br] of [[-12, -10, 9], [8, -14, 8], [12, 6, 10], [-6, 12, 9], [-16, 4, 6], [2, -2, 7]]) { ctx.beginPath(); ctx.arc(bx, by, br, 0, TAU); ctx.fill(); }
+        ctx.globalAlpha = 1; ctx.strokeStyle = C.soot; ctx.lineWidth = 2; ctx.lineCap = 'round'; // frazzled tufts
+        for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 7, -20); for (let j = 1; j <= 3; j++) ctx.lineTo(i * 7 + (j % 2 ? 4 : -4), -20 - j * 5 * Math.min(1, u * 4)); ctx.stroke(); }
+        ctx.restore(); ctx.save();
+        ctx.fillStyle = C.smoke;
+        for (const q of d.parts) { ctx.globalAlpha = Math.max(0, Math.min(1, q.life)); ctx.beginPath(); ctx.arc(q.x, q.y, q.r * (1.6 - q.life * 0.5), 0, TAU); ctx.fill(); }
+        break;
+      }
+      case 'tombstone': { // bonk: knocked back, dazed wobble, circling stars
+        const knock = Math.sin(Math.min(1, u / 0.2) * Math.PI) * -8;
+        ctx.translate(d.x + knock, d.y); ctx.rotate(Math.sin(t * 9) * 0.18 * (1 - u * 0.5));
+        drawGhostBody('idle-1', 'x');
+        ctx.restore(); ctx.save();
+        if (!drawFx('starsRing', d.x + knock - 32, d.y - 30 - 16, Math.floor(t * D.fps) % D.fx.starsRing.frames)) {
+          ctx.fillStyle = C.star;
+          for (let i = 0; i < 5; i++) { const a = t * 6 + i * TAU / 5; drawStar5(d.x + knock + Math.cos(a) * 24, d.y - 30 + Math.sin(a) * 7, 6, t * 4); }
+        }
+        break;
+      }
+      case 'skull': { // spooked: shiver, fading flicker, lines
+        const sh = Math.sin(t * 70) * 3 * (1 - u * 0.6);
+        ctx.translate(d.x + sh, d.y); ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.cos(t * 12));
+        drawGhostBody('idle-1');
+        ctx.globalAlpha = 1; ctx.strokeStyle = C.spook; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+        for (const a of [-2.4, -1.57, -0.7]) { ctx.beginPath(); ctx.moveTo(Math.cos(a) * 30, Math.sin(a) * 30); ctx.lineTo(Math.cos(a) * 40, Math.sin(a) * 40); ctx.stroke(); }
+        break;
+      }
+      case 'floor': { // flop over, x_x
+        const fl = easeOut(Math.min(1, u / 0.35)), onCeil = game.deathObj === 'ceiling';
+        ctx.translate(d.x, d.y + (onCeil ? -6 : 6) * fl); ctx.rotate((onCeil ? -1 : 1) * fl * Math.PI / 2); ctx.scale(1 + 0.12 * fl, 1 - 0.12 * fl);
+        drawGhostBody('idle-1', 'x');
+        break;
+      }
+      default: { // poof: puff up, fade out, smoke ring
+        const k = 1 + easeOut(Math.min(1, u / 0.5)) * 0.35;
+        ctx.translate(d.x, d.y); ctx.scale(k, k); ctx.globalAlpha = Math.max(0, 1 - u * 1.4);
+        drawGhostBody('idle-1', 'x');
+        ctx.restore(); ctx.save();
+        ctx.fillStyle = 'rgba(240, 232, 255, 0.85)';
+        for (const q of d.parts) { ctx.globalAlpha = Math.max(0, q.life * 1.6); ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, TAU); ctx.fill(); }
+      }
     }
     ctx.restore();
   }
@@ -2234,7 +2824,7 @@ window.ScoreService = ScoreService;
       if (game.stageIndex > 0) text(CONFIG.looks[stage().id].name, W / 2, 230, 20, { color: CONFIG.colors.accent });
       if (game.golden) text('Golden ghost! x2 points', W / 2, 196, 18, { color: CONFIG.colors.ghostGolden });
       ctx.globalAlpha = blink; text('Tap to start', W / 2, H / 2 + 50, 26); ctx.globalAlpha = 1;
-      text(`Best: ${game.best}`, W / 2, H - CONFIG.world.groundHeight / 2, 20);
+      text(`${game.player}  ·  Best: ${game.best}`, W / 2, H - CONFIG.world.groundHeight / 2, 20);
       return;
     }
     if (game.state === 'playing') {
@@ -2247,32 +2837,29 @@ window.ScoreService = ScoreService;
         ctx.globalAlpha = 1;
       }
       text(`Best ${game.best}`, W - 12, 22, 14, { align: 'right', weight: 'normal' });
-      if (game.goldenModeT > 0) {
-        const f = Math.min(1, game.goldenModeT / CONFIG.golden.mode.seconds);
-        ctx.fillStyle = 'rgba(30,20,51,0.6)'; roundRect(W / 2 - 50, 98, 100, 10, 5); ctx.fill();
-        ctx.fillStyle = CONFIG.colors.ghostGolden; roundRect(W / 2 - 50, 98, 100 * f, 10, 5); ctx.fill();
-        text('x2', W / 2 + 64, 103, 14, { color: CONFIG.colors.ghostGolden });
-      }
-      if (game.banner) {
-        const T = CONFIG.stages.transition.bannerSeconds, t = game.banner.t;
-        ctx.globalAlpha = t < 0.15 ? t / 0.15 : t > T ? Math.max(0, 1 - (t - T) / 0.4) : 1;
-        drawBannerPill(game.banner.text);
-        ctx.globalAlpha = 1;
-      }
+      text(game.player, 12, 22, 14, { align: 'left', weight: 'normal' });
+      drawSpecialHud();
+      if (game.banner) drawBanner();
       if (game.paused) { ctx.fillStyle = CONFIG.colors.panelBg; ctx.fillRect(0, 0, W, H); text('Paused', W / 2, H / 2 - 20, 36); text('Tap to resume', W / 2, H / 2 + 24, 20); }
       return;
     }
-    const px = 40, py = 170, pw = W - 80, ph = 250;
+    if (game.death && game.death.t < game.death.seconds) { text(String(game.score), W / 2, 64, 52); return; } // v0.5: anim first, panel after
+    const px = 40, py = 150, pw = W - 80, ph = 270;
+    const pin = game.death ? easeOut(Math.min(1, (game.time - game.deadTime - game.death.seconds) / 0.25)) : 1;
+    ctx.globalAlpha = pin;
     ctx.fillStyle = CONFIG.colors.panelBg; roundRect(px, py, pw, ph, 22); ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = CONFIG.colors.accent; ctx.stroke();
-    text('Game Over', W / 2, py + 42, 34);
-    text(`Score: ${game.score}`, W / 2, py + 96, 26);
-    text(`Best: ${game.best}`, W / 2, py + 132, 22);
-    let y = py + 166;
+    text('Game Over', W / 2, py + 40, 34);
+    text(game.player, W / 2, py + 80, 18, { color: CONFIG.colors.accent });
+    text(`Score: ${game.score}`, W / 2, py + 116, 26);
+    text(`Best: ${game.best}`, W / 2, py + 152, 22);
+    let y = py + 186;
     if (game.newBest) { text('New best!', W / 2, y, 18, { color: CONFIG.colors.accent }); y += 26; }
+    if (game.rank) { text(`#${game.rank} in the Top ${CONFIG.scoring.topScoresMax}`, W / 2, y, 16, { color: CONFIG.colors.sparkle }); y += 24; }
     const medal = medalFor(game.score);
     if (medal) text(medal, W / 2, y, 18, { color: CONFIG.colors.ghostGolden });
-    if (game.time - game.deadTime >= CONFIG.ui.restartLockout) { ctx.globalAlpha = blink; text('Tap to restart', W / 2, py + ph + 44, 24); ctx.globalAlpha = 1; }
+    ctx.globalAlpha = 1;
+    if (game.time - restartFrom() >= CONFIG.ui.restartLockout) { ctx.globalAlpha = blink; text('Tap to restart', W / 2, py + ph + 40, 24); ctx.globalAlpha = 1; }
   }
   const BANNER = { y: 200, size: 30, padX: 18, h: 48 };
   function bannerRect(str) {
@@ -2289,10 +2876,86 @@ window.ScoreService = ScoreService;
     ctx.globalAlpha = a;
     text(str, W / 2, BANNER.y + 1, BANNER.size, { color: CONFIG.colors.accent });
   }
+  // v0.5 banner: swooshes in (ease-out-back), holds, swooshes out (ease-in), with a burst,
+  // a sparkle trail and a 'Stage N' badge. Art (CONFIG.transitions.art) replaces each piece when loaded.
+  const easeOutBack = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+  function bannerOffset(t) { // x offset (logical px) of the banner for banner time t
+    const B = CONFIG.transitions.banner, hold = CONFIG.stages.transition.bannerSeconds;
+    if (t < B.inSeconds) return (1 - easeOutBack(t / B.inSeconds)) * B.fromX * W;
+    if (t < hold) return 0;
+    return easeIn(Math.min(1, (t - hold) / B.outSeconds)) * B.toX * W;
+  }
+  function bannerArt(sid) { return sprites.ui[`banner-${sid}`] || sprites.ui[`bannerBlank-${sid}`] || sprites.ui.bannerBlank || null; }
+  function bannerBox(sid, str) { // resting rect of the banner (art 300x90 or the pill)
+    const TB = CONFIG.transitions.banner;
+    return bannerArt(sid) ? [W / 2 - TB.w / 2, BANNER.y - TB.h / 2, TB.w, TB.h] : bannerRect(str);
+  }
+  function drawBanner() {
+    const TB = CONFIG.transitions, B = TB.banner, TA = TB.art, t = game.banner.t, sid = game.banner.stage || stage().id, fps = 12;
+    const dx = bannerOffset(t), [bx, by, bw, bh] = bannerBox(sid, game.banner.text);
+    game.stats.bannerX = dx;
+    // burst flourish on arrival (fx-burst-<stage>, 6 f @12 fps, play once)
+    const bt = t - B.inSeconds * 0.7, burst = sprites.ui[`burst-${sid}`];
+    if (bt > 0 && burst) {
+      const f = Math.floor(bt * fps), F = TA.burst, r = sprites.res;
+      if (f < F.frames) { const sz = F.w * 1.5; ctx.drawImage(burst, f * F.w * r, 0, F.w * r, F.h * r, W / 2 - sz / 2, BANNER.y - sz / 2, sz, sz); game.stats.burstFrame = f; }
+    } else if (bt > 0 && bt < 0.6) { // placeholder burst
+      const k = bt / 0.6, pal = TB.palette[sid] || ['#ffffff', '#ffb3c9'];
+      ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = pal[1]; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12, r0 = bw / 2 * 0.6 + 50 * easeOut(k), r1 = r0 + 14; ctx.beginPath(); ctx.moveTo(W / 2 + Math.cos(a) * r0, BANNER.y + Math.sin(a) * r0 * 0.45); ctx.lineTo(W / 2 + Math.cos(a) * r1, BANNER.y + Math.sin(a) * r1 * 0.45); ctx.stroke(); }
+      ctx.restore();
+    }
+    // sparkle swoosh while the banner moves (fx-swoosh, 6 f @12 fps; drawn mirrored: the banner travels right -> left)
+    const hold = CONFIG.stages.transition.bannerSeconds, moving = t < B.inSeconds || t > hold;
+    if (moving) {
+      const pt = t < B.inSeconds ? t : t - hold, sw = sprites.ui.swoosh;
+      if (sw) {
+        const F = TA.swoosh, r = sprites.res, f = Math.min(F.frames - 1, Math.floor(pt * fps));
+        ctx.save(); ctx.translate(W / 2 + dx + bw * 0.25, BANNER.y); ctx.scale(-1.2, 1.2);
+        ctx.drawImage(sw, f * F.w * r, 0, F.w * r, F.h * r, -F.w / 2, -F.h / 2, F.w, F.h); ctx.restore();
+        game.stats.swooshFrame = f;
+      } else {
+        ctx.save(); ctx.fillStyle = CONFIG.colors.sparkle;
+        for (let i = 0; i < B.sparkles; i++) { const f = i / B.sparkles; ctx.globalAlpha = (1 - f) * 0.9; drawStar5(W / 2 + dx + bw / 2 + f * 120, BANNER.y + Math.sin(i * 2.3 + t * 20) * bh * 0.4, 4 * (1 - f) + 1.5, i); }
+        ctx.restore();
+      }
+    }
+    ctx.save(); ctx.translate(dx, 0);
+    const lettered = sprites.ui[`banner-${sid}`], blank = bannerArt(sid);
+    if (lettered) ctx.drawImage(lettered, bx, by, bw, bh);
+    else if (blank) { ctx.drawImage(blank, bx, by, bw, bh); text(game.banner.text, bx + B.textX, by + B.textBaseline - 10, 26, { color: CONFIG.colors.text }); }
+    else drawBannerPill(game.banner.text);
+    // 'Stage N' badge
+    const BD = TB.badge, n = (game.banner.index != null ? game.banner.index : game.stageIndex) + 1, badge = sprites.ui[`badge-${n}`];
+    if (badge) ctx.drawImage(badge, W / 2 - BD.w / 2, BD.y - BD.h / 2, BD.w, BD.h);
+    else if (sprites.ui.badgeBlank) { ctx.drawImage(sprites.ui.badgeBlank, W / 2 - BD.w / 2, BD.y - BD.h / 2, BD.w, BD.h); text(String(n), W / 2 - BD.w / 2 + 74, BD.y + 1, 16, { color: CONFIG.colors.eye }); }
+    else { const label = BD.text.replace('{n}', n); ctx.font = `bold ${BD.size}px ${CONFIG.ui.font}`; const w = ctx.measureText(label).width + 20; ctx.fillStyle = CONFIG.colors.bannerBg; roundRect(W / 2 - w / 2, BD.y - 12, w, 24, 12); ctx.fill(); text(label, W / 2, BD.y + 1, BD.size, { color: CONFIG.colors.sparkle }); }
+    ctx.restore();
+    game.stats.bannerRect = [bx, by, bw, bh]; // resting rect (the Tap! cue avoids it)
+    game.stats.bannerArt = lettered ? 'lettered' : blank ? 'blank' : 'pill';
+  }
+  // v0.5 sky/palette crossfade: gradient overlay between stage palettes, peaking mid-fade
+  function drawPaletteTint(fromId, toId, t) {
+    const TP = CONFIG.transitions, a = TP.palette[fromId], b = TP.palette[toId];
+    if (!a || !b) return;
+    const mix = (c1, c2) => { const p = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)); const x = p(c1), y = p(c2); return `rgb(${x.map((v, i) => Math.round(lerp(v, y[i], t))).join(',')})`; };
+    const al = TP.tintPeak * Math.sin(Math.PI * Math.min(1, t));
+    if (al <= 0.004) return;
+    const gr = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    gr.addColorStop(0, mix(a[0], b[0])); gr.addColorStop(1, mix(a[1], b[1]));
+    ctx.save(); ctx.globalAlpha = al; ctx.fillStyle = gr; ctx.fillRect(0, 0, W, GROUND_Y); ctx.restore();
+    game.stats.tint = { from: fromId, to: toId, t: +t.toFixed(3), alpha: +al.toFixed(3) };
+  }
   function tapCuePos() { // beside the ghost; drops below it if it would touch the banner
     const g = game.ghost, x = CONFIG.ghost.x + 58, w = 64, h = 32;
     let y = g.y - 30;
-    if (game.banner) { const [bx, by, bw, bh] = bannerRect(game.banner.text); if (x + w / 2 > bx && x - w / 2 < bx + bw && y + h / 2 > by - 6 && y - h / 2 < by + bh + 6) y = g.y + 52; }
+    if (game.banner) { // QA TR-CUE: keep clear of the banner and the 'Stage N' badge (pad 6 px)
+      const BD = CONFIG.transitions.badge, P = CONFIG.ui.tapCuePad, ox = game.stats.bannerX || 0, [b0, b1, b2, b3] = bannerBox(game.banner.stage || stage().id, game.banner.text);
+      const bd = [W / 2 - BD.w / 2, BD.y - BD.h / 2, BD.w, BD.h];
+      const boxes = [[b0, b1, b2, b3], bd, [b0 + ox, b1, b2, b3], [bd[0] + ox, bd[1], bd[2], bd[3]]]; // resting + live (sliding) rects
+      const hit = yy => boxes.some(([bx, by, bw, bh]) => x + w / 2 > bx - P && x - w / 2 < bx + bw + P && yy + h / 2 > by - P && yy - h / 2 < by + bh + P);
+      y = CONFIG.ui.tapCueOffsets.map(o => g.y + o).find(yy => !hit(yy)) ?? g.y + CONFIG.ui.tapCueOffsets[1];
+    }
     return { x, y, rect: [x - w / 2, y - h / 2, w, h] };
   }
   function drawFloatTexts() {
@@ -2313,6 +2976,7 @@ window.ScoreService = ScoreService;
     const from = game.fade ? STAGES[game.fade.from].id : null;
     const t = game.fade ? easeInOut(Math.min(1, game.fade.t)) : 1;
     if (game.cutscene) { drawLaunchScene(); return; }
+    if (artBg(cur) && A.backgrounds.layers.some(l => bgState[l] && bgState[l].cur !== cur)) updateBgLayers(0); // QA TR-FLASH: stage switched after this tick's layer update; set up the tile/fade now, not one frame late
     drawStageBackground(cur);
     drawAmbientBack(cur, t);
     if (from && !(artBg(cur) && artBg(from))) { // placeholder crossfade: old stage rendered offscreen, composited at (1 - t)
@@ -2322,6 +2986,7 @@ window.ScoreService = ScoreService;
       ctx = mainCtx;
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1 - t; ctx.drawImage(bgCanvas, 0, 0); ctx.restore();
     }
+    if (from) drawPaletteTint(from, cur, t);
     drawColumns();
     drawHazards();
     drawPickups();
@@ -2332,7 +2997,9 @@ window.ScoreService = ScoreService;
     if (from) drawAmbientFront(from, 1 - t);
     drawAmbientFront(cur, t);
     drawParticles();
-    if (game.state !== 'loading') drawGhost();
+    drawSpecialFx();
+    if (game.death) drawDeath(); else if (game.state !== 'loading') drawGhost();
+    drawFrost();
     if (game.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${game.flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
     drawFloatTexts();
     drawHUD();
@@ -2355,8 +3022,276 @@ window.ScoreService = ScoreService;
     return true;
   };
   game.forcePickup = () => { game.forcePickupNext = true; };
+  game.killNow = obj => { // v0.5: end the run now with obj's death anim (object id, hazard, event or anim name)
+    if (game.state === 'ready') { game.state = 'playing'; }
+    if (game.state !== 'playing') return false;
+    const god = game.god; game.god = false; die('debug:' + obj, obj); game.god = god; return game.death && game.death.anim;
+  };
+  game.deathAnimFor = obj => deathAnimFor(obj);
+  game.givePower = type => { // v1.9 QA: collect a special now (same path as touching the token)
+    type = ({ life: 'extraLife', chill: 'slowMo' })[type] || type;
+    if (game.state === 'ready') { game.state = 'playing'; flap(); }
+    if (game.state !== 'playing' || !CONFIG.specials[type]) return false;
+    collectPickup({ x: CONFIG.ghost.x, pickup: { type, dx: 0, y: game.ghost.y, taken: false } }); return true;
+  };
+  game.dieAs = (cause, obj) => { if (game.state !== 'playing') return false; const god = game.god; game.god = false; die(cause, obj); game.god = god; return game.state; };
+  game.worldNow = () => worldNow();
+  game.ui = { openProfiles: () => openProfiles(), openTop: () => openTop(), close: () => closeUi() };
   game._dbg = { nextReady: () => { const n = STAGES[game.stageIndex + 1]; if (!n) return true; const sc = canvas.height / H; return prewarmKeys().filter(k => k.includes(n.id) || k === 'launchSky').every(k => { const e = layerCache.get(k); return e && e.sc === sc; }) && A.backgrounds.layers.every(l => prewarmKeys().includes(`${n.id}-${l}`)); }, bgSettled: () => A.backgrounds.layers.every(l => { const st = bgState[l]; return st && st.cur === stage().id && !st.trans && !st.fade; }), prewarmReady: () => !building && !buildQueue.length && prewarmKeys().every(k => { const e = layerCache.get(k); return e && e.sc === canvas.height / H; }), hbFallbacks, coverageBreaks, hitsShapes, resolveColumn, stageIndexForPairs, pairHits, columnHitboxes, multiplier, physics, hazardY, speedFor, gapFor, spacingFor, EVENTS, currentSpeed, transitionActive, patternRunning, hitbox: () => ({ r: hitboxRadius, off: hitboxOffsetY }), getLayer, layerCache };
   }
+
+  // ---- v0.5 'Who's playing?' + top-10 (small DOM overlay, mobile-friendly) ----------------------
+  const ui = { bar: null, modal: null, open: null, shown: null };
+  const icon = (key, color) => { const P = CONFIG.profileIcons, i = el('img', 'gg-ic'); i.alt = ''; i.width = i.height = P.size; i.draggable = false;
+    i.src = P.dir + P[key].replace('{size}', P.size * 1.5 >= 48 ? 48 : P.size).replace('{color}', color || ''); i.onerror = () => i.remove(); return i; };
+  const chipColor = id => { const P = CONFIG.profileIcons, i = ScoreService.getProfiles().findIndex(p => p.id === id); return P.chipColors[Math.max(0, i) % P.chipColors.length]; };
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  function buildUi() {
+    const C = CONFIG.colors, st = el('style');
+    st.textContent = `.gg-ui{font-family:${CONFIG.ui.font};color:#fff;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.gg-bar{position:fixed;display:none;gap:10px;justify-content:center;transform:translate(-50%,-50%);z-index:5}
+.gg-btn{font:inherit;font-weight:bold;font-size:16px;color:#fff;background:${C.bannerBg};border:2px solid ${C.bannerEdge};border-radius:22px;padding:9px 16px;min-height:44px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.gg-btn{display:inline-flex;align-items:center;gap:6px}.gg-ic{width:26px;height:26px;flex:none;pointer-events:none}
+.gg-item span{display:inline-flex;align-items:center;gap:8px}
+.gg-btn:active{transform:scale(.96)}
+.gg-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,6,20,.55);z-index:10}
+.gg-panel{width:min(86vw,330px);max-height:80vh;overflow:auto;background:${C.panelBg.replace('0.72', '0.96')};border:3px solid ${C.accent};border-radius:22px;padding:16px 16px 14px;box-sizing:border-box}
+.gg-panel h2{margin:0 0 12px;text-align:center;font-size:24px;color:${C.accent}}
+.gg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.gg-item{display:flex;justify-content:space-between;align-items:center;font:inherit;font-size:17px;font-weight:bold;color:#fff;background:rgba(255,255,255,.08);border:2px solid transparent;border-radius:14px;padding:10px 14px;min-height:44px;cursor:pointer}
+.gg-item.cur{border-color:${C.ghostGolden}}
+.gg-item small{opacity:.75;font-weight:normal;margin-left:10px}
+.gg-add{display:flex;gap:8px}
+.gg-add input{flex:1;min-width:0;font:inherit;font-size:17px;padding:10px 12px;border-radius:12px;border:2px solid ${C.bannerEdge};background:#fff;color:#2b1d3d;user-select:text;-webkit-user-select:text}
+.gg-err{min-height:20px;color:${C.warning};font-size:14px;margin:6px 2px 0}
+.gg-close{display:block;margin:12px auto 0}
+.gg-top{width:100%;border-collapse:collapse;font-size:15px}
+.gg-top td{padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.12)}
+.gg-top td.n{text-align:right;font-weight:bold;color:${C.ghostGolden}}
+.gg-top td.s{opacity:.75;font-size:13px}
+.gg-empty{text-align:center;opacity:.8;padding:12px}
+.gg-btn:disabled{opacity:.45;cursor:default;transform:none}
+.gg-share-link{text-decoration:none}
+.gg-toast{position:fixed;left:50%;bottom:12%;transform:translateX(-50%);display:none;z-index:20;font-weight:bold;font-size:17px;background:${C.bannerBg};border:2px solid ${C.accent};border-radius:18px;padding:10px 18px;pointer-events:none}`;
+    document.head.appendChild(st);
+    ui.bar = el('div', 'gg-ui gg-bar'); ui.bar.id = 'gg-bar';
+    ui.playerBtn = el('button', 'gg-btn'); ui.playerBtn.id = 'gg-player'; ui.playerBtn.type = 'button';
+    ui.topBtn = el('button', 'gg-btn'); ui.topBtn.append(icon('trophy'), el('span', null, `Top ${CONFIG.scoring.topScoresMax}`)); ui.topBtn.id = 'gg-topbtn'; ui.topBtn.type = 'button';
+    ui.shareBtn = el('button', 'gg-btn'); ui.shareBtn.append(icon('share'), el('span', null, 'Share')); ui.shareBtn.id = 'gg-sharebtn'; ui.shareBtn.type = 'button'; ui.shareBtn.disabled = true;
+    ui.bar.append(ui.playerBtn, ui.topBtn, ui.shareBtn);
+    ui.modal = el('div', 'gg-ui gg-modal'); ui.modal.id = 'gg-modal';
+    ui.panel = el('div', 'gg-panel'); ui.modal.appendChild(ui.panel);
+    document.body.append(ui.bar, ui.modal);
+    ui.playerBtn.addEventListener('click', () => openProfiles());
+    ui.topBtn.addEventListener('click', () => openTop());
+    ui.shareBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); doShare(); });
+    ui.modal.addEventListener('click', e => { if (e.target === ui.modal) closeUi(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape' && ui.open) closeUi(); });
+  }
+  function uiOpen() { return !!ui.open; }
+  function closeUi() { ui.open = null; ui.modal.style.display = 'none'; ui.panel.textContent = ''; }
+  function setPlayer() { game.player = ScoreService.getCurrentProfile().name; if (game.state !== 'over') game.best = ScoreService.getBest(); }
+  SS.onProfileChange(setPlayer); // QA PR-SYNC: API add/selectProfile refresh the HUD player at once
+  function openProfiles(msg) {
+    ui.open = 'profiles'; ui.panel.textContent = '';
+    ui.panel.appendChild(el('h2', null, "Who's playing?"));
+    const list = el('div', 'gg-list'); list.id = 'gg-profiles';
+    const cur = ScoreService.getCurrentProfile().id;
+    for (const pr of ScoreService.getProfiles()) {
+      const b = el('button', 'gg-item' + (pr.id === cur ? ' cur' : '')); b.type = 'button'; b.dataset.id = pr.id;
+      const nm = el('span'); nm.append(icon('chip', chipColor(pr.id)), el('span', null, pr.name));
+      b.append(nm, el('small', null, `Best ${pr.best}`));
+      b.addEventListener('click', () => { ScoreService.selectProfile(pr.id); setPlayer(); closeUi(); });
+      list.appendChild(b);
+    }
+    const add = el('div', 'gg-add'), inp = el('input'), go = el('button', 'gg-btn'); go.append(icon('add'), el('span', null, 'Add'));
+    inp.id = 'gg-name'; inp.placeholder = 'New player'; inp.maxLength = CONFIG.scoring.maxNameLength; inp.autocomplete = 'off'; inp.enterKeyHint = 'done';
+    go.id = 'gg-add'; go.type = 'button';
+    const err = el('div', 'gg-err', msg || ''); err.id = 'gg-err';
+    const submit = () => {
+      const r = ScoreService.addProfile(inp.value);
+      if (r.ok) { setPlayer(); closeUi(); return; }
+      err.textContent = { empty: 'Type a name first', 'too-long': `Max ${CONFIG.scoring.maxNameLength} letters`, duplicate: 'That name is taken', full: 'No room for more players' }[r.reason] || 'Try another name';
+    };
+    go.addEventListener('click', submit);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+    add.append(inp, go);
+    const close = el('button', 'gg-btn gg-close', 'Close'); close.type = 'button'; close.addEventListener('click', closeUi);
+    ui.panel.append(list, add, err, close);
+    ui.modal.style.display = 'flex';
+  }
+  function openTop() {
+    ui.open = 'top'; ui.panel.textContent = '';
+    ui.panel.appendChild(el('h2', null, `Top ${CONFIG.scoring.topScoresMax}`));
+    const rows = ScoreService.getTopScores();
+    if (!rows.length) ui.panel.appendChild(el('div', 'gg-empty', 'No scores yet. Go fly!'));
+    else {
+      const tb = el('table', 'gg-top'); tb.id = 'gg-topscores';
+      rows.forEach((r, i) => {
+        const tr = el('tr'), look = CONFIG.looks[r.stage];
+        tr.append(el('td', 'n', `${i + 1}.`), el('td', null, r.name), el('td', 'n', String(r.score)), el('td', 's', `${look ? look.name : r.stage}${r.date ? ' · ' + r.date.slice(5) : ''}`));
+        tb.appendChild(tr);
+      });
+      ui.panel.appendChild(tb);
+    }
+    const close = el('button', 'gg-btn gg-close', 'Close'); close.type = 'button'; close.addEventListener('click', closeUi);
+    ui.panel.appendChild(close);
+    ui.modal.style.display = 'flex';
+  }
+  function syncUi() { // show the buttons on the start screen and (after the anim) on game over
+    const mode = game.state === 'ready' && !game.paused ? 'ready' : game.state === 'over' && !deathPlaying() ? 'over' : null;
+    if (mode !== ui.shown) {
+      ui.shown = mode;
+      ui.bar.style.display = mode ? 'flex' : 'none';
+      ui.playerBtn.style.display = mode === 'ready' ? '' : 'none';
+      ui.shareBtn.style.display = mode === 'over' && SHC().enabled ? '' : 'none';
+      if (mode === 'over' && SHC().enabled) setTimeout(prepareCard, 0);
+      if (!mode && ui.open) closeUi();
+    }
+    if (ui.shareBtn) { const ok = mode === 'over' && shareReady(); if (ui.shareBtn.disabled === ok) ui.shareBtn.disabled = !ok; } // locked with the restart tap
+    if (mode) {
+      const r = canvas.getBoundingClientRect(), y = r.top + (CONFIG.transitions.uiBarY / H) * r.height;
+      const pos = `${Math.round(r.left + r.width / 2)}px|${Math.round(y)}px`;
+      if (pos !== ui.pos) { ui.pos = pos; ui.bar.style.left = pos.split('|')[0]; ui.bar.style.top = pos.split('|')[1]; }
+      if (ui.playerLabel !== game.player) {
+        ui.playerLabel = game.player; ui.playerBtn.textContent = '';
+        ui.playerBtn.append(icon('chip', chipColor(ScoreService.getCurrentProfile().id)), el('span', null, game.player));
+      }
+    }
+  }
+  // ---- v0.5 'Share score' (game-over only; never restarts; native share -> fallback sheet) -----------------
+  const share = { busy: false, card: null, blob: null, key: null, layout: null, frames: new Map(), last: null, toastT: 0 };
+  const SHC = () => CONFIG.share;
+  function shareInfo() {
+    const S = SHC(), look = CONFIG.looks[stage().id] || {}, stageName = look.name || stage().id;
+    const vals = { name: game.player || 'Player 1', score: String(game.score), stage: stageName, best: String(game.best) };
+    const text = S.template.replace(/\{(name|score|stage|best)\}/g, (m, k) => vals[k]); // QA SH-TPL: replacer fn, so $& / $' in names stay literal
+    return Object.freeze({ text, url: S.url, full: `${text} ${S.url}`, stageId: stage().id, stageName, score: game.score, best: game.best,
+      player: game.player || 'Player 1', golden: !!(game.golden || (game.death && game.death.golden)) });
+  }
+  const shareReady = () => SHC().enabled && game.state === 'over' && !deathPlaying() && game.time - restartFrom() >= CONFIG.ui.restartLockout;
+  function loadShareLayout() {
+    if (share.layout) return Promise.resolve(share.layout);
+    const fb = SHC().areas;
+    const job = window.fetch ? fetch(SHC().layout).then(r => (r.ok ? r.json() : null)).catch(() => null) : Promise.resolve(null);
+    return job.then(j => { const out = {}; for (const k of Object.keys(fb)) out[k] = Object.assign({}, fb[k], j && j.areas && j.areas[k] ? j.areas[k] : {}); share.layout = out; return out; });
+  }
+  function loadFrame(sid) {
+    const S = SHC(), f = S.frameStageFile[sid] || sid;
+    const tryLoad = suffix => { const src = S.frameFile.replace('{stage}', suffix); if (share.frames.has(src)) return share.frames.get(src);
+      const p = new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; }); share.frames.set(src, p); return p; };
+    return tryLoad('-' + f).then(i => i || tryLoad(''));
+  }
+  function drawnFrame(x, W2, H2, sid) { // pastel fallback when Art's frame is missing
+    const pal = CONFIG.transitions.palette[sid] || (CONFIG.looks[sid] || {}).sky || ['#241D40', '#5E4A86'];
+    const g = x.createLinearGradient(0, 0, 0, H2); g.addColorStop(0, pal[0]); g.addColorStop(1, pal[1]); x.fillStyle = g; x.fillRect(0, 0, W2, H2);
+    const rr = (l, t, w, h, r) => { x.beginPath(); x.moveTo(l + r, t); x.arcTo(l + w, t, l + w, t + h, r); x.arcTo(l + w, t + h, l, t + h, r); x.arcTo(l, t + h, l, t, r); x.arcTo(l, t, l + w, t, r); x.closePath(); };
+    x.fillStyle = '#FFF4E6'; rr(50, 40, 500, 640, 40); x.fill(); x.lineWidth = 10; x.strokeStyle = '#F4B6C8'; x.stroke();
+    x.lineWidth = 4; x.strokeStyle = '#BFE8D6'; rr(64, 54, 472, 612, 30); x.stroke();
+    x.fillStyle = '#E3D4F5'; rr(120, 546, 360, 56, 28); x.fill();
+    x.fillStyle = '#FFF4E6'; rr(80, 736, 440, 48, 24); x.fill();
+  }
+  function fitText(x, s, a, font) {
+    const [l, t, w, h] = a.rect; let px = a.maxFont || 28;
+    const set = () => { x.font = `${a.weight || 'bold'} ${px}px ${font}`; };
+    set(); while (px > 8 && x.measureText(s).width > w) { px -= 1; set(); }
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    const cx = l + w / 2, cy = t + h / 2;
+    if (a.stroke) { x.lineJoin = 'round'; x.lineWidth = (a.strokeW || 4) * 2; x.strokeStyle = a.stroke; x.strokeText(s, cx, cy); }
+    x.fillStyle = a.color || '#4A3358'; x.fillText(s, cx, cy);
+    return px;
+  }
+  async function makeCard(info) {
+    const S = SHC(), k = S.card.scale || 2, c = document.createElement('canvas'); c.width = S.card.w * k; c.height = S.card.h * k;
+    const x = c.getContext('2d'); x.scale(k, k);
+    const [L, frame] = await Promise.all([loadShareLayout(), loadFrame(info.stageId), document.fonts && document.fonts.ready ? document.fonts.ready.catch(() => null) : null]);
+    if (frame) x.drawImage(frame, 0, 0, S.card.w, S.card.h); else drawnFrame(x, S.card.w, S.card.h, info.stageId);
+    const img = sprites.ghost[info.golden ? 'golden' : 'normal'], [gl, gt, gw, gh] = L.ghost.rect;
+    if (img) { const fs = img.height, d = Math.min(gw, gh) * 0.96; x.imageSmoothingQuality = 'high'; x.drawImage(img, 0, 0, fs, fs, gl + (gw - d) / 2, gt + (gh - d) / 2, d, d); }
+    else { x.fillStyle = info.golden ? CONFIG.colors.ghostGolden : '#ffffff'; x.beginPath(); x.arc(gl + gw / 2, gt + gh / 2, gw * 0.35, 0, TAU); x.fill(); }
+    const f = S.font, fit = {};
+    fit.stage = fitText(x, info.stageName, L.stage, f);
+    fit.score = fitText(x, String(info.score), L.score, f);
+    fit.best = fitText(x, `Best ${info.best}`, L.best, f);
+    fit.player = fitText(x, info.player, L.player, f);
+    fit.url = fitText(x, info.url.replace(/^https?:\/\//, '').replace(/\/$/, ''), L.url, f);
+    share.cardMeta = { w: c.width, h: c.height, frame: frame ? frame.src.split('/').pop() : 'drawn', golden: info.golden, fit };
+    return c;
+  }
+  function prepareCard() { // built once per game over, after the death anim, so the tap handler can share synchronously
+    const info = shareInfo(), key = JSON.stringify(info);
+    if (share.key === key) return share.job;
+    share.key = key; share.blob = null; share.card = null;
+    share.job = makeCard(info).then(c => new Promise(r => c.toBlob(b => { if (share.key === key) { share.card = c; share.blob = b; } r(b); }, 'image/png')))
+      .catch(() => null);
+    return share.job;
+  }
+  async function doShare() {
+    if (!shareReady() || share.busy) return;
+    share.busy = true;
+    const info = shareInfo();
+    const last = share.last = { info, path: null, result: null, size: 0, at: Date.now() };
+    try {
+      const blob = share.blob || (await prepareCard());
+      last.size = blob ? blob.size : 0;
+      if (navigator.share) {
+        const base = { title: SHC().title, text: info.text, url: info.url };
+        let data = base;
+        if (blob && typeof File === 'function' && typeof navigator.canShare === 'function') {
+          try { const d2 = Object.assign({}, base, { files: [new File([blob], SHC().fileName, { type: 'image/png' })] }); if (navigator.canShare(d2)) data = d2; } catch (e) { /* no file sharing */ }
+        }
+        last.path = data.files ? 'native-files' : 'native-text';
+        try { await navigator.share(data); last.result = 'shared'; }
+        catch (e) {
+          if (e && e.name === 'AbortError') { last.result = 'aborted'; return; } // user cancelled: stay silent
+          last.result = 'failed'; openShareSheet(info, blob);
+        }
+        return;
+      }
+      last.path = 'sheet'; openShareSheet(info, blob);
+    } finally { share.busy = false; }
+  }
+  function shareLinks(info) {
+    const I = SHC().intents, e = encodeURIComponent, fill = t => t.replace(/\{(text|url|full)\}/g, (m, k) => e(info[k]));
+    return { x: fill(I.x), facebook: fill(I.facebook), whatsapp: fill(I.whatsapp) };
+  }
+  async function copyText(t) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(t); return 'clipboard'; } } catch (e) { /* fall through */ }
+    try {
+      const ta = el('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length); const ok = document.execCommand('copy'); ta.remove();
+      return ok ? 'execCommand' : null;
+    } catch (e) { return null; }
+  }
+  function toast(msg) {
+    if (!ui.toast) { ui.toast = el('div', 'gg-ui gg-toast'); ui.toast.id = 'gg-toast'; ui.toast.setAttribute('role', 'status'); document.body.appendChild(ui.toast); }
+    ui.toast.textContent = msg; ui.toast.style.display = 'block';
+    clearTimeout(share.toastT); share.toastT = setTimeout(() => { ui.toast.style.display = 'none'; }, SHC().toastSeconds * 1000);
+  }
+  function openShareSheet(info, blob) {
+    ui.open = 'share'; ui.panel.textContent = '';
+    ui.panel.appendChild(el('h2', null, 'Share score'));
+    const list = el('div', 'gg-list gg-share'); list.id = 'gg-share';
+    const links = shareLinks(info);
+    for (const [id, label] of [['x', 'X'], ['facebook', 'Facebook'], ['whatsapp', 'WhatsApp']]) {
+      const a = el('a', 'gg-item gg-share-link', null); a.append(el('span', null, label)); a.id = 'gg-share-' + id;
+      a.href = links[id]; a.target = '_blank'; a.rel = 'noopener noreferrer'; list.appendChild(a);
+    }
+    const copy = el('button', 'gg-item'); copy.type = 'button'; copy.id = 'gg-share-copy'; copy.append(el('span', null, 'Copy link/text'));
+    copy.addEventListener('click', async () => { const how = await copyText(info.full); if (share.last) share.last.copied = how; toast(how ? 'Copied!' : 'Copy failed'); });
+    const save = el('button', 'gg-item'); save.type = 'button'; save.id = 'gg-share-save'; save.append(el('span', null, 'Save image'));
+    save.addEventListener('click', async () => {
+      const b = blob || share.blob || (await prepareCard()); if (!b) { toast('Image not ready'); return; }
+      const u = URL.createObjectURL(b), a = el('a'); a.href = u; a.download = SHC().fileName; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 4000); if (share.last) share.last.saved = b.size;
+    });
+    list.append(copy, save);
+    const close = el('button', 'gg-btn gg-close', 'Close'); close.type = 'button'; close.addEventListener('click', closeUi);
+    ui.panel.append(list, close);
+    ui.modal.style.display = 'flex';
+  }
+  buildUi();
+  if (DEBUG) game._share = { shareInfo, shareReady, makeCard, prepareCard, doShare, shareLinks, copyText, openShareSheet, state: share };
 
   // ---- Main loop --------------------------------------------------------------------------------
   let lastT = performance.now();
@@ -2367,6 +3302,7 @@ window.ScoreService = ScoreService;
     const t0 = performance.now();
     if (!game.paused) update(dt);
     draw();
+    syncUi();
     prewarm();
     const cost = performance.now() - t0;
     if (game.state === 'playing') {

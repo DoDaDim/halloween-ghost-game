@@ -1,0 +1,27 @@
+{
+  "_note": "top/bottom of the vertical sky gradient, identical to the 'sky' linearGradient in bg-<stage>-far.svg (y 0 -> 640). Use for stage-transition fades.",
+  "graveyard": {
+    "top": "#241D40",
+    "bottom": "#5E4A86"
+  },
+  "church": {
+    "top": "#222350",
+    "bottom": "#5A5490"
+  },
+  "countryside": {
+    "top": "#1E2C4A",
+    "bottom": "#4E6E8A"
+  },
+  "schools": {
+    "top": "#26245A",
+    "bottom": "#6E5694"
+  },
+  "city": {
+    "top": "#1C2044",
+    "bottom": "#4C3E7A"
+  },
+  "space": {
+    "top": "#120F2C",
+    "bottom": "#2B2050"
+  }
+}

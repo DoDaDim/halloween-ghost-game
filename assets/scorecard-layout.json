@@ -1,0 +1,87 @@
+{
+  "_note": "600x800 canvas coords (multiply by 2 for @2x). rect=[x,y,w,h]. Text colours sit on the constant cream card/ribbon so they read on every stage tint.",
+  "canvas": [
+    600,
+    800
+  ],
+  "font": "rounded bold (e.g. 'Baloo 2', 'M PLUS Rounded 1c', fallback sans-serif bold)",
+  "areas": {
+    "ghost": {
+      "rect": [
+        200,
+        66,
+        200,
+        200
+      ],
+      "note": "draw ghost sprite centred, e.g. 64px art at 3x = 192px"
+    },
+    "stage": {
+      "rect": [
+        110,
+        282,
+        380,
+        40
+      ],
+      "align": "center",
+      "baseline": "middle",
+      "maxFont": 28,
+      "color": "#7A5A9E",
+      "weight": "bold"
+    },
+    "score": {
+      "rect": [
+        80,
+        330,
+        440,
+        140
+      ],
+      "align": "center",
+      "baseline": "middle",
+      "maxFont": 120,
+      "color": "#4A3358",
+      "weight": "900",
+      "note": "optional 4px stroke #FFFFFF behind fill for extra pop"
+    },
+    "best": {
+      "rect": [
+        130,
+        480,
+        340,
+        40
+      ],
+      "align": "center",
+      "baseline": "middle",
+      "maxFont": 28,
+      "color": "#C9798F",
+      "weight": "bold"
+    },
+    "player": {
+      "rect": [
+        120,
+        546,
+        360,
+        56
+      ],
+      "align": "center",
+      "baseline": "middle",
+      "maxFont": 34,
+      "color": "#4A3358",
+      "weight": "bold",
+      "note": "sits on a lilac pill; shrink-to-fit"
+    },
+    "url": {
+      "rect": [
+        90,
+        742,
+        420,
+        36
+      ],
+      "align": "center",
+      "baseline": "middle",
+      "maxFont": 22,
+      "color": "#4A3358",
+      "weight": "bold",
+      "note": "cream ribbon at the bottom, outside the card"
+    }
+  }
+}

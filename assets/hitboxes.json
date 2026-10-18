@@ -868,6 +868,48 @@
       "r": 16,
       "placement": "gapCentre",
       "note": "brighter-glow variant for the space background"
+    },
+    "power-rush": {
+      "files": "pickup-rush-{0..3}",
+      "strip": "pickup-rush-strip",
+      "size": [
+        56,
+        56
+      ],
+      "type": "circle",
+      "cx": 28,
+      "cy": 28,
+      "r": 16,
+      "placement": "gapCentre",
+      "fps": 8
+    },
+    "power-life": {
+      "files": "pickup-life-{0..3}",
+      "strip": "pickup-life-strip",
+      "size": [
+        56,
+        56
+      ],
+      "type": "circle",
+      "cx": 28,
+      "cy": 28,
+      "r": 16,
+      "placement": "gapCentre",
+      "fps": 8
+    },
+    "power-chill": {
+      "files": "pickup-chill-{0..3}",
+      "strip": "pickup-chill-strip",
+      "size": [
+        56,
+        56
+      ],
+      "type": "circle",
+      "cx": 28,
+      "cy": 28,
+      "r": 16,
+      "placement": "gapCentre",
+      "fps": 8
     }
   },
   "events": {
