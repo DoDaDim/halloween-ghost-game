@@ -747,6 +747,120 @@
       "obs-school-chimney": "schools top",
       "obs-city-skyscraper": "city top",
       "note": "no longer used as TOP obstacles from v0.4 (files kept). Tombs/coffin/cross remain graveyard bottoms."
+    },
+    "obs-void-typewriter-top": {
+      "files": "obs-void-typewriter-top-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 77,
+      "note": "satin ribbon (24px solid) from the cloud-bank ceiling; bow and sparkles decorative; paper sheet is solid"
+    },
+    "obs-void-typewriter-bottom": {
+      "files": "obs-void-typewriter-bottom-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 6,
+      "pumpkinSeat": [
+        40,
+        6
+      ],
+      "note": "cotton-candy cloud stack (60px solid); cloud side bumps and sparkles decorative; paper sheet is solid"
+    },
+    "obs-void-crt-top": {
+      "files": "obs-void-crt-top-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 76,
+      "note": "satin ribbon (24px solid) from the cloud-bank ceiling; bow and sparkles decorative; rabbit-ear antenna tips are solid (2 small rects)"
+    },
+    "obs-void-crt-bottom": {
+      "files": "obs-void-crt-bottom-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 6,
+      "pumpkinSeat": [
+        40,
+        14
+      ],
+      "note": "cotton-candy cloud stack (60px solid); cloud side bumps and sparkles decorative; rabbit-ear antenna tips are solid (2 small rects)"
+    },
+    "obs-void-phone-top": {
+      "files": "obs-void-phone-top-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 75,
+      "note": "satin ribbon (24px solid) from the cloud-bank ceiling; bow and sparkles decorative; curly cord stub on the right is decorative"
+    },
+    "obs-void-phone-bottom": {
+      "files": "obs-void-phone-bottom-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 6,
+      "pumpkinSeat": [
+        40,
+        6
+      ],
+      "note": "cotton-candy cloud stack (60px solid); cloud side bumps and sparkles decorative; curly cord stub on the right is decorative"
+    },
+    "obs-void-cassette-top": {
+      "files": "obs-void-cassette-top-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 77,
+      "note": "satin ribbon (24px solid) from the cloud-bank ceiling; bow and sparkles decorative"
+    },
+    "obs-void-cassette-bottom": {
+      "files": "obs-void-cassette-bottom-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 6,
+      "pumpkinSeat": [
+        40,
+        6
+      ],
+      "note": "cotton-candy cloud stack (60px solid); cloud side bumps and sparkles decorative"
+    },
+    "obs-void-gramophone-top": {
+      "files": "obs-void-gramophone-top-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 77,
+      "note": "satin ribbon (24px solid) from the cloud-bank ceiling; bow and sparkles decorative; horn is stepped in 3 rects"
+    },
+    "obs-void-gramophone-bottom": {
+      "files": "obs-void-gramophone-bottom-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 6,
+      "pumpkinSeat": [
+        40,
+        6
+      ],
+      "note": "cotton-candy cloud stack (60px solid); cloud side bumps and sparkles decorative; horn is stepped in 3 rects"
+    },
+    "obs-void-alarm-top": {
+      "files": "obs-void-alarm-top-{body,cap-bottom}",
+      "side": "top",
+      "ceilEdge": 75.7,
+      "note": "satin ribbon (24px solid) from the cloud-bank ceiling; bow and sparkles decorative; bells + knob solid; little feet decorative"
+    },
+    "obs-void-alarm-bottom": {
+      "files": "obs-void-alarm-bottom-{body,cap-top}",
+      "side": "bottom",
+      "floorEdge": 5.999999999999999,
+      "pumpkinSeat": [
+        40,
+        6
+      ],
+      "note": "cotton-candy cloud stack (60px solid); cloud side bumps and sparkles decorative; bells + knob solid; little feet decorative"
+    },
+    "_stageTopsVoid": {
+      "obs-void-typewriter-top": 1,
+      "obs-void-crt-top": 2,
+      "obs-void-phone-top": 2,
+      "obs-void-cassette-top": 1,
+      "obs-void-gramophone-top": 1,
+      "obs-void-alarm-top": 2,
+      "note": "stage 7 'void' TOP (ceiling) set: column id -> suggested weight (Tuning owns weights). Tops use -body + -cap-bottom only (satin ribbon + hanging object)."
+    },
+    "_stageBottomsVoid": {
+      "obs-void-typewriter-bottom": 2,
+      "obs-void-crt-bottom": 2,
+      "obs-void-phone-bottom": 1,
+      "obs-void-cassette-bottom": 1,
+      "obs-void-gramophone-bottom": 1,
+      "obs-void-alarm-bottom": 1,
+      "note": "stage 7 'void' BOTTOM (floor) set: column id -> suggested weight. Bottoms use -body + -cap-top only (cotton-candy cloud + object)."
     }
   },
   "hazards": {
@@ -808,6 +922,74 @@
       "cy": 22,
       "r": 13,
       "note": "frame 1 is drawn 1.5px higher (built-in bob); keep the circle at (20,22)"
+    },
+    "void-float-a": {
+      "files": "obs-void-float-cassette-{0,1,2,3}",
+      "single": "obs-void-float-cassette",
+      "strip": "obs-void-float-cassette-strip",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 20,
+      "r": 13,
+      "frames": 4,
+      "fps": 6,
+      "art": "cassette",
+      "note": "4-frame wobble loop (+-6 deg about (20,20)) with twinkle; hit circle fixed at (20,20). Motion (drift/bob) is Code's"
+    },
+    "void-float-b": {
+      "files": "obs-void-float-clock-{0,1,2,3}",
+      "single": "obs-void-float-clock",
+      "strip": "obs-void-float-clock-strip",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 20,
+      "r": 14,
+      "frames": 4,
+      "fps": 6,
+      "art": "clock",
+      "note": "4-frame wobble loop (+-6 deg about (20,20)) with twinkle; hit circle fixed at (20,20). Motion (drift/bob) is Code's"
+    },
+    "void-float-c": {
+      "files": "obs-void-float-phone-{0,1,2,3}",
+      "single": "obs-void-float-phone",
+      "strip": "obs-void-float-phone-strip",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 20,
+      "r": 12,
+      "frames": 4,
+      "fps": 6,
+      "art": "phone",
+      "note": "4-frame wobble loop (+-6 deg about (20,20)) with twinkle; hit circle fixed at (20,20). Motion (drift/bob) is Code's"
+    },
+    "void-float-d": {
+      "files": "obs-void-float-floppy-{0,1,2,3}",
+      "single": "obs-void-float-floppy",
+      "strip": "obs-void-float-floppy-strip",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 20,
+      "r": 13,
+      "frames": 4,
+      "fps": 6,
+      "art": "floppy",
+      "note": "4-frame wobble loop (+-6 deg about (20,20)) with twinkle; hit circle fixed at (20,20). Motion (drift/bob) is Code's; optional 4th floater, not in CONFIG yet"
     }
   },
   "pickups": {
@@ -1000,6 +1182,54 @@
       "r": 12,
       "direction": "from top-right toward bottom-left (trail points up-right)",
       "note": "trail is decorative"
+    },
+    "void-invader": {
+      "files": "event-void-invader-{0,1}",
+      "strip": "event-void-invader-strip",
+      "size": [
+        40,
+        40
+      ],
+      "type": "circle",
+      "cx": 20,
+      "cy": 20,
+      "r": 14,
+      "frames": 2,
+      "fps": 4,
+      "variants": [
+        "event-void-invader-strip",
+        "event-void-invader-b-strip",
+        "event-void-invader-c-strip"
+      ],
+      "note": "march: alternate frames 0/1. Types a (mint), b (pink), c (lilac) share size + hitbox; e.g. one type per wave/row"
+    },
+    "void-invader-pop": {
+      "files": "event-void-invader-pop-{0..5}",
+      "strip": "event-void-invader-pop-strip",
+      "size": [
+        64,
+        64
+      ],
+      "anchor": [
+        32,
+        32
+      ],
+      "frames": 6,
+      "fps": 12,
+      "hitbox": null,
+      "note": "play once at an invader's centre (e.g. when it leaves / on wave cleared / on hit); decorative"
+    },
+    "warning-void": {
+      "files": "ui-event-warning-void-{0,1}",
+      "strip": "ui-event-warning-void-strip",
+      "size": [
+        40,
+        40
+      ],
+      "frames": 2,
+      "fps": 4,
+      "hitbox": null,
+      "note": "Void version of ui-event-warning for the 'Invaders!' warning"
     }
   },
   "ambient": {
@@ -1668,7 +1898,8 @@
       "countryside",
       "schools",
       "city",
-      "space"
+      "space",
+      "void"
     ],
     "layers": [
       "far",
@@ -1683,6 +1914,11 @@
         "far": 0.05,
         "mid": 0.15,
         "near": 0.5
+      },
+      "void": {
+        "far": 0.05,
+        "mid": 0.15,
+        "near": 0.5
       }
     },
     "transitions": [
@@ -1690,7 +1926,200 @@
       "bg-trans-church-countryside-*",
       "bg-trans-countryside-schools-*",
       "bg-trans-schools-city-*"
-    ]
+    ],
+    "void": {
+      "_note": "v0.6 memory-lite set (ASSETS.md 14.2). NOT the plain bg-void-{layer}.png 720x640 tiles: each layer is a stack of parts drawn at world y offsets inside the 720-wide tile slot (tileWidth 720, seamless in x). The full-height originals stay as bg-void-{far,mid,near}-full.* backups (and the old bg-void-{layer}.* names are left in place until Code switches).",
+      "far": [
+        {
+          "kind": "gradient",
+          "top": "#2C2356",
+          "bottom": "#7A64AE",
+          "y": 0,
+          "h": 640,
+          "alt": "bg-void-far-sky.png"
+        },
+        {
+          "file": "bg-void-far-nebula.png",
+          "size1x": [
+            360,
+            80
+          ],
+          "size2x": [
+            720,
+            160
+          ],
+          "y": 0,
+          "drawW": 720,
+          "drawH": 640,
+          "note": "draw stretched to 720x640 world px with image smoothing ON"
+        },
+        {
+          "file": "bg-void-far-stars.png",
+          "size1x": [
+            360,
+            320
+          ],
+          "size2x": [
+            720,
+            640
+          ],
+          "y": 0,
+          "repeat": "xy",
+          "note": "repeat 2 x 2 to fill the 720x640 tile slot (x 0/360, y 0/320), scroll with the far layer"
+        }
+      ],
+      "mid": [
+        {
+          "file": "bg-void-mid-upper.png",
+          "size1x": [
+            720,
+            320
+          ],
+          "size2x": [
+            1440,
+            640
+          ],
+          "y": 128,
+          "note": "clock, CRT, cassette, gramophone silhouettes + 2 mist ovals"
+        },
+        {
+          "file": "bg-void-mid-lower.png",
+          "size1x": [
+            720,
+            96
+          ],
+          "size2x": [
+            1440,
+            192
+          ],
+          "y": 504,
+          "note": "phone silhouette + low mist oval"
+        }
+      ],
+      "near": [
+        {
+          "file": "bg-void-near-ceil.png",
+          "size1x": [
+            720,
+            72
+          ],
+          "size2x": [
+            1440,
+            144
+          ],
+          "y": 0,
+          "note": "cotton-candy ceiling bank"
+        },
+        {
+          "file": "bg-void-near-floor.png",
+          "size1x": [
+            720,
+            84
+          ],
+          "size2x": [
+            1440,
+            168
+          ],
+          "y": 556,
+          "note": "cotton-candy floor bank"
+        },
+        {
+          "kind": "sprites",
+          "sprites": {
+            "bg-void-near-glint-sparkle": {
+              "file": "bg-void-near-glint-sparkle.png",
+              "size1x": [
+                12,
+                12
+              ],
+              "size2x": [
+                24,
+                24
+              ],
+              "anchor": [
+                6,
+                6
+              ],
+              "note": "sparkle r=4 at scale 1; scale = r/4"
+            },
+            "bg-void-near-glint-note": {
+              "file": "bg-void-near-glint-note.png",
+              "size1x": [
+                20,
+                20
+              ],
+              "size2x": [
+                40,
+                40
+              ],
+              "anchor": [
+                6,
+                17
+              ],
+              "note": "music note, 65% alpha baked in"
+            }
+          },
+          "placements": [
+            {
+              "sprite": "bg-void-near-glint-sparkle",
+              "x": 40,
+              "y": 140,
+              "scale": 0.75
+            },
+            {
+              "sprite": "bg-void-near-glint-sparkle",
+              "x": 200,
+              "y": 470,
+              "scale": 0.9
+            },
+            {
+              "sprite": "bg-void-near-glint-sparkle",
+              "x": 330,
+              "y": 90,
+              "scale": 0.65
+            },
+            {
+              "sprite": "bg-void-near-glint-sparkle",
+              "x": 480,
+              "y": 330,
+              "scale": 0.8
+            },
+            {
+              "sprite": "bg-void-near-glint-sparkle",
+              "x": 640,
+              "y": 500,
+              "scale": 0.7
+            },
+            {
+              "sprite": "bg-void-near-glint-sparkle",
+              "x": 560,
+              "y": 180,
+              "scale": 0.6
+            },
+            {
+              "sprite": "bg-void-near-glint-note",
+              "x": 120,
+              "y": 260,
+              "scale": 1.0
+            },
+            {
+              "sprite": "bg-void-near-glint-note",
+              "x": 420,
+              "y": 420,
+              "scale": 1.0
+            },
+            {
+              "sprite": "bg-void-near-glint-note",
+              "x": 690,
+              "y": 230,
+              "scale": 1.0
+            }
+          ],
+          "note": "x,y = sprite anchor in world px within the 720 tile period"
+        }
+      ],
+      "transitions": "none: bg-trans-space-void-* are deprecated/optional. Swap space -> void layers under bg-trans-space-void-mist frame 3."
+    }
   },
   "obs-graveyard-lantern-branch-body": {
     "rects": [
@@ -3095,6 +3524,554 @@
         40,
         31,
         15
+      ]
+    ]
+  },
+  "obs-void-typewriter-top-body": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        64
+      ]
+    ]
+  },
+  "obs-void-typewriter-top-cap-bottom": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        38
+      ],
+      [
+        26,
+        32,
+        29,
+        12
+      ],
+      [
+        16,
+        42,
+        49,
+        12
+      ],
+      [
+        13,
+        53,
+        55,
+        24
+      ],
+      [
+        10,
+        47,
+        7,
+        6
+      ]
+    ]
+  },
+  "obs-void-typewriter-bottom-body": {
+    "rects": [
+      [
+        10,
+        0,
+        60,
+        64
+      ]
+    ]
+  },
+  "obs-void-typewriter-bottom-cap-top": {
+    "rects": [
+      [
+        26,
+        6,
+        29,
+        12
+      ],
+      [
+        16,
+        16,
+        49,
+        12
+      ],
+      [
+        13,
+        26,
+        55,
+        24
+      ],
+      [
+        10,
+        20,
+        7,
+        6
+      ],
+      [
+        10,
+        44,
+        60,
+        36
+      ]
+    ],
+    "circles": [
+      [
+        20,
+        50,
+        10
+      ],
+      [
+        60,
+        50,
+        10
+      ]
+    ]
+  },
+  "obs-void-crt-top-body": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        64
+      ]
+    ]
+  },
+  "obs-void-crt-top-cap-bottom": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        29
+      ],
+      [
+        14,
+        31,
+        53,
+        40
+      ],
+      [
+        22,
+        70,
+        36,
+        6
+      ],
+      [
+        27,
+        24,
+        5,
+        8
+      ],
+      [
+        46,
+        23,
+        5,
+        8
+      ]
+    ]
+  },
+  "obs-void-crt-bottom-body": {
+    "rects": [
+      [
+        10,
+        0,
+        60,
+        64
+      ]
+    ]
+  },
+  "obs-void-crt-bottom-cap-top": {
+    "rects": [
+      [
+        14,
+        14,
+        53,
+        40
+      ],
+      [
+        22,
+        53,
+        36,
+        6
+      ],
+      [
+        27,
+        7,
+        5,
+        8
+      ],
+      [
+        46,
+        6,
+        5,
+        8
+      ],
+      [
+        10,
+        52,
+        60,
+        28
+      ]
+    ],
+    "circles": [
+      [
+        20,
+        58,
+        10
+      ],
+      [
+        60,
+        58,
+        10
+      ]
+    ]
+  },
+  "obs-void-phone-top-body": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        64
+      ]
+    ]
+  },
+  "obs-void-phone-top-cap-bottom": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        33
+      ],
+      [
+        14,
+        27,
+        52,
+        14
+      ],
+      [
+        20,
+        40,
+        40,
+        7
+      ],
+      [
+        16,
+        45,
+        49,
+        30
+      ]
+    ]
+  },
+  "obs-void-phone-bottom-body": {
+    "rects": [
+      [
+        10,
+        0,
+        60,
+        64
+      ]
+    ]
+  },
+  "obs-void-phone-bottom-cap-top": {
+    "rects": [
+      [
+        14,
+        6,
+        52,
+        14
+      ],
+      [
+        20,
+        18,
+        40,
+        7
+      ],
+      [
+        16,
+        24,
+        49,
+        30
+      ],
+      [
+        10,
+        47,
+        60,
+        33
+      ]
+    ],
+    "circles": [
+      [
+        20,
+        53,
+        10
+      ],
+      [
+        60,
+        53,
+        10
+      ]
+    ]
+  },
+  "obs-void-cassette-top-body": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        64
+      ]
+    ]
+  },
+  "obs-void-cassette-top-cap-bottom": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        47
+      ],
+      [
+        11,
+        41,
+        58,
+        36
+      ]
+    ]
+  },
+  "obs-void-cassette-bottom-body": {
+    "rects": [
+      [
+        10,
+        0,
+        60,
+        64
+      ]
+    ]
+  },
+  "obs-void-cassette-bottom-cap-top": {
+    "rects": [
+      [
+        11,
+        6,
+        58,
+        36
+      ],
+      [
+        10,
+        35,
+        60,
+        45
+      ]
+    ],
+    "circles": [
+      [
+        20,
+        41,
+        10
+      ],
+      [
+        60,
+        41,
+        10
+      ]
+    ]
+  },
+  "obs-void-gramophone-top-body": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        64
+      ]
+    ]
+  },
+  "obs-void-gramophone-top-cap-bottom": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        30
+      ],
+      [
+        20,
+        24,
+        44,
+        7
+      ],
+      [
+        24,
+        31,
+        34,
+        8
+      ],
+      [
+        30,
+        39,
+        21,
+        18
+      ],
+      [
+        21,
+        55,
+        38,
+        22
+      ]
+    ]
+  },
+  "obs-void-gramophone-bottom-body": {
+    "rects": [
+      [
+        10,
+        0,
+        60,
+        64
+      ]
+    ]
+  },
+  "obs-void-gramophone-bottom-cap-top": {
+    "rects": [
+      [
+        20,
+        6,
+        44,
+        7
+      ],
+      [
+        24,
+        13,
+        34,
+        8
+      ],
+      [
+        30,
+        21,
+        21,
+        18
+      ],
+      [
+        21,
+        37,
+        38,
+        22
+      ],
+      [
+        10,
+        52,
+        60,
+        28
+      ]
+    ],
+    "circles": [
+      [
+        20,
+        58,
+        10
+      ],
+      [
+        60,
+        58,
+        10
+      ]
+    ]
+  },
+  "obs-void-alarm-top-body": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        64
+      ]
+    ]
+  },
+  "obs-void-alarm-top-cap-bottom": {
+    "rects": [
+      [
+        28,
+        0,
+        24,
+        30
+      ],
+      [
+        37,
+        24,
+        7,
+        7
+      ]
+    ],
+    "circles": [
+      [
+        40.0,
+        53.1,
+        22.6
+      ],
+      [
+        26.3,
+        29.8,
+        6.2
+      ],
+      [
+        53.7,
+        29.8,
+        6.2
+      ]
+    ]
+  },
+  "obs-void-alarm-bottom-body": {
+    "rects": [
+      [
+        10,
+        0,
+        60,
+        64
+      ]
+    ]
+  },
+  "obs-void-alarm-bottom-cap-top": {
+    "rects": [
+      [
+        37,
+        6,
+        7,
+        7
+      ],
+      [
+        10,
+        51,
+        60,
+        29
+      ]
+    ],
+    "circles": [
+      [
+        40.0,
+        35.4,
+        22.6
+      ],
+      [
+        26.3,
+        12.2,
+        6.2
+      ],
+      [
+        53.7,
+        12.2,
+        6.2
+      ],
+      [
+        20,
+        57,
+        10
+      ],
+      [
+        60,
+        57,
+        10
       ]
     ]
   }

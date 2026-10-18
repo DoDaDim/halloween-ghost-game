@@ -23,5 +23,9 @@
   "space": {
     "top": "#120F2C",
     "bottom": "#2B2050"
+  },
+  "void": {
+    "top": "#2C2356",
+    "bottom": "#7A64AE"
   }
 }

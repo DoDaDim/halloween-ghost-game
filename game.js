@@ -1,12 +1,14 @@
 // =============================================================================
-// Ghost Flap v0.3 — Halloween Flappy-style kawaii ghost game
+// Ghost Flap v0.6.1 — Halloween Flappy-style kawaii ghost game (v0.6: The Void, TUNING v2.0;
+// v0.6.1: warp cuts under the mist without trans tiles, space unloaded after the swap, Art §14.2 memory-lite Void parts, Void card frame)
 // All tunables live in CONFIG (docs/TUNING.md v1.0–v1.7, plus build-only keys
 // marked [build]). Game logic reads every number from CONFIG.
 // Units: logical pixels (360x640 playfield) and seconds.
 // PROGRESSION counts PAIRS PASSED (TUNING v1.7): gapFor/spacingFor/speedFor, unlockAt,
-// v0.4.2: launch.atScore is the DISPLAYED score. startAt, events firesAt/repeatEvery, hazards/golden minScore are all in pairs.
+// v0.4.2: launch.atScore is the DISPLAYED score; v0.6: warp.atScore (space -> The Void) likewise. startAt, events firesAt/repeatEvery, hazards/golden minScore are all in pairs.
 // Score (with bonuses) is only for display, best score and medals.
 // QA hooks (query string): ?stage=N|id  ?event=hearse|rocket|<id>  ?pickup=1|all
+//   ?event=warp (score -> warp.atScore)  ?stage=void
 //   ?golden=1|0 (golden run)  ?god=1 (no deaths, hits logged)  ?effects=0
 // =============================================================================
 const CONFIG = {
@@ -59,7 +61,10 @@ const CONFIG = {
   },
 
   stages: {
-    loopFrom: 'space', // final stage, endless
+    loopFrom: 'void', // v2.0: The Void is the final, endless stage (space is no longer endless)
+    // v0.6.1 (QA F3, David's rule: top and bottom must not look alike): never pair the same object top and bottom.
+    // objectOf: regex whose group 1 names the object behind a column id (obs-void-crt-top / -bottom -> crt).
+    pairRule: { distinctObjects: true, objectOf: '^obs-void-(.+)-(?:top|bottom)$' },
     // v1.8: tops hang from above, bottoms are stage-themed. Ids are CONFIG.objects keys
     // (Art's hitboxes.json columns._stageTopsV04 / _stageBottomsV04). Tops only ever go on top, bottoms on the bottom.
     list: [
@@ -83,6 +88,16 @@ const CONFIG = {
         bottom: { 'moonrock': 2, 'crystals': 1, 'alienplant': 1 },
         // applied only while in space; same key names as CONFIG.ghost
         physics: { gravity: 1400, flapImpulse: -415, maxFallSpeed: 560, maxRiseSpeed: -520 } },
+      // v2.0 (TUNING.md): reached ONLY by the warp at a displayed score (no startAt in pairs).
+      // Art §14 column ids (Tuning's void-top-* / void-bot-* placeholders are aliases, see objectAliases).
+      // Weights = Art's suggested weights from hitboxes.json columns._stageTopsVoid / _stageBottomsVoid (Tuning owns them).
+      { id: 'void',        startAtScore: 200, // displayed score, like the launch (= warp.atScore)
+        top:    { 'obs-void-crt-top': 2, 'obs-void-phone-top': 2, 'obs-void-alarm-top': 2, 'obs-void-typewriter-top': 1, 'obs-void-cassette-top': 1, 'obs-void-gramophone-top': 1 },
+        bottom: { 'obs-void-typewriter-bottom': 2, 'obs-void-crt-bottom': 2, 'obs-void-phone-bottom': 1, 'obs-void-cassette-bottom': 1, 'obs-void-gramophone-bottom': 1, 'obs-void-alarm-bottom': 1 },
+        physics: 'normal',                 // back to standard flap and gravity
+        breatherPairs: 1,                  // 1 random breather between patterns (was 2)
+        speed: { stepEveryPairs: 10, stepAmount: 4, max: 270 }, // ramps on from 240, counted from Void entry
+        gap: 145, spacing: 190 },          // held at the floors, never tighter
     ],
     aliases: { schools: 'school' }, // [build] old stage ids still accepted by ?stage= / setStage
     bottom: { 'tomb-a': 1, 'tomb-b': 1, 'tomb-c': 1 }, // [build] default if a stage has no bottom map
@@ -109,6 +124,11 @@ const CONFIG = {
       skull:        { radius: 13, motion: 'driftY', amplitude: 45, period: 2.4 },
       miniAsteroid: { radius: 13, motion: 'driftY', amplitude: 40, period: 3.0, spin: true, spinSpeed: 1.8 }, // ~103 deg/s (Art: 90-120)
       alien:        { radius: 13, motion: 'bobY', amplitude: 30, period: 1.4 },
+      // v2.0 retro floaters (r 12 to 14 per Tuning; motion values [build])
+      'void-float-a': { radius: 13, motion: 'driftY', amplitude: 35, period: 2.8, art: 'cassette' },
+      'void-float-b': { radius: 14, motion: 'bobY', amplitude: 28, period: 1.6, art: 'clock' },
+      'void-float-c': { radius: 12, motion: 'driftY', amplitude: 40, period: 3.2, art: 'phone' },
+      'void-float-d': { radius: 13, motion: 'bobY', amplitude: 30, period: 2.0, art: 'floppy' }, // Art §15 optional floppy (pending Tuning sign-off)
     },
     perStage: {
       graveyard:   { chance: 0.15, mix: { skull: 2, pumpkin: 1 } },
@@ -117,11 +137,13 @@ const CONFIG = {
       school:      { chance: 0.30, mix: { bat: 1, pumpkin: 1, skull: 1 } },
       city:        { chance: 0.35, mix: { bat: 2, skull: 2, pumpkin: 1 } },
       space:       { chance: 0.35, mix: { miniAsteroid: 2, alien: 1 } },
+      void:        { chance: 0.40, mix: { 'void-float-a': 1, 'void-float-b': 1, 'void-float-c': 1, 'void-float-d': 1 } }, // retro floaters (d = floppy, equal weight, pending Tuning)
     },
     noHazardDuring: ['transition', 'event', 'goldenPickupPair'],
   },
 
   launch: {
+    target: 'space',         // v0.6: the stage the rocket flies to (no longer the endless loop stage)
     trigger: 'score',        // v0.4.2 hotfix (David): launch when the DISPLAYED score reaches atScore
     atScore: 100,            // displayed score (bonuses included); pairs >= stages[space].startAt also launches (QA hooks)
     eventFinishMaxSeconds: 6, // an ACTIVE event at that moment finishes first (max this long), else it's cleared
@@ -142,6 +164,37 @@ const CONFIG = {
     crossfadeAt: 0.88,       // = arrive / 2.5: stage switches to space and its layers fade in
   },
 
+  // v2.0 (TUNING.md): space -> The Void handover. Same rule as the launch: DISPLAYED score, once per run
+  // (reset() clears it), a bonus jumping past atScore still triggers, an active event finishes first.
+  warp: {
+    atScore: 200,
+    cutsceneSeconds: 2.0,     // no collisions, no scoring, pairs cleared, taps ignored
+    then: 'transition',
+    achievement: 'Into the Void',
+    from: 'space', target: 'void', // [build]
+    eventFinishMaxSeconds: 6, // [build] same as the launch
+    // [build] 'stars blur into pastel mist', seconds of a 2.0 s cutscene (scaled if cutsceneSeconds changes):
+    // 0..streak[1] the stars stretch into streaks; at mistStart Art's mist overlay (§14.3, 8 f @ 8 fps, once) and the
+    // 'The Void' banner start together; the bg layers switch to void (via the trans tiles) at mist frame switchFrame.
+    timeline: { streak: [0.0, 1.2], mistStart: 1.0, ghostSettle: 1.0 },
+    mist: { file: 'bg-trans-space-void-mist-strip.png', folder: '1x', frames: 8, fps: 8, w: 360, h: 640, switchFrame: 3, // 1x strip upscaled (soft art, 4x less memory)
+      // v0.6.1 (QA F1 flicker): alpha-crossfade frame f -> f+1 by sub-frame progress (the frame after the last is empty),
+      // normalise: per-frame alpha gain so each frame's mean mist luminance follows a 3-tap smoothed curve (never > 1),
+      // swapFadeSeconds: the outgoing (space) backdrop, snapshotted just before the cut, fades out over the new one.
+      crossfade: true, normalise: true, swapFadeSeconds: 0, // swapFade (full-canvas snapshot) costs 33 ms frames in headless: off
+      veil: { peak: 0.5, halfWidth: 0.2 } }, // a flat lilac veil peaking at the cut hides the space -> void luminance step (drawn into the 1x mist buffer)
+    warmOnIdle: true,         // v0.6.1 (QA F4): from the prewarm trigger, decode the Void images one per idle callback
+    streakLength: 110, streakCount: 36, mistBlobs: 10, ribbons: 3, // placeholder mist (if Art's strip is missing)
+    prewarmScoreAhead: 5,     // [build] queue the Void tiles only this close to atScore (or once the warp starts)
+    // v0.6.1 (Art option b): no bg-trans-space-void tiles (not even loaded); the layers cut space -> void under the
+    // mist at switchFrame, then the space tiles are evicted and their images unloaded (reloaded on the next run).
+    useTransitionTiles: false,
+    unloadFromAfterSwap: true,
+    deferLayers: ['near'],    // Void layers built only after the swap (space gone first: 2x peak 23.5 MB, not 31.7);
+                              // under the warp mist an uncached deferred layer is skipped for the few frames its build takes
+    qaStartPairs: 200,        // [build] ?stage=void starts here (QA only; the real entry is the warp)
+  },
+
   golden: {
     run: { enabled: true, chance: 0.04, scoreMultiplier: 2, firstPointBonus: 10 }, // kept per Boss/David
     maxMultiplier: 2,                   // run x2 and pickup x2 don't stack (null = allow stacking)
@@ -160,6 +213,7 @@ const CONFIG = {
     rush: {
       fromPairs: 10, chancePerPair: 0.03, minPairsBetween: 25, pityAfterPairs: 50,
       space: { chancePerPair: 0.04, minPairsBetween: 20, pityAfterPairs: 40 },
+      void:  { chancePerPair: 0.04, minPairsBetween: 20, pityAfterPairs: 40 }, // v2.0: the Void uses the space rates
       seconds: 5, invincible: true, smashThrough: true,
       instantPoints: 5, pairPoints: 1, smashBonus: 1, scoreMultiplier: 2, // x2 capped by golden.maxMultiplier
       graceSeconds: 1.0, floorAndCeilingSafe: true,
@@ -217,6 +271,15 @@ const CONFIG = {
                      waves: 2, waveCrossAt: [1.0, 2.6], laneHeight: 170, spacing: 50,
                      vx: -320, vy: 160, laneShiftMin: 60, laneShiftMax: 120, laneMinY: 140, laneMaxY: 420,
                      desc: 'Meteors streak diagonally from top-right in 2 waves with a clear lane between; hold the lane.' },
+      // v2.0: counted from Void entry (pairs at the warp); meteors are space-only, so they stop in the Void
+      void:        { id: 'invaderWave', firesAfterEntryPairs: 10, repeatEvery: 30, seconds: 4.0, bonus: 10,
+                     // [build] 2 rows (formations) sweep right -> left, each a full-height curtain with ONE clear lane
+                     waves: 2, waveCrossAt: [1.2, 2.8], laneHeight: 176, spacing: 44, r: 14, vx: -260, wiggle: 3,
+                     rowSheets: ['invader', 'invaderB', 'invaderC'], // one colour per row (wave), picked without repeats
+                     rowColors: ['#AEE3C6', '#FFB6CC', '#D9C6F5'],   // placeholder colours for the same three types
+                     popSeconds: 0.5, warningSheet: 'warningVoid',
+                     laneShiftMin: 60, laneShiftMax: 110, laneMinY: 150, laneMaxY: 410,
+                     desc: 'Two rows of retro pixel invaders sweep across with one clear lane at least 176 px tall; hold the lane.' },
     },
   },
 
@@ -264,6 +327,11 @@ const CONFIG = {
       hydrant: 'generic', crystals: 'tombstone', alienplant: 'generic', bat: 'bat', pumpkin: 'pumpkin', skull: 'skull',
       miniAsteroid: 'meteor', alien: 'generic', hearse: 'floor', batSwarm: 'generic', pumpkinRoll: 'generic', sweetShower: 'generic',
       nightBus: 'floor', 'city-pigeon': 'bat', meteorShower: 'meteor', ground: 'floor', ceiling: 'generic', tomb: 'tombstone',
+      // v0.6 The Void
+      // death-map.json §14: hanging tops -> generic, hard retro bottoms -> tombstone (see-stars)
+      'obs-void-typewriter-top': 'generic', 'obs-void-crt-top': 'generic', 'obs-void-phone-top': 'generic', 'obs-void-cassette-top': 'generic', 'obs-void-gramophone-top': 'generic', 'obs-void-alarm-top': 'generic',
+      'obs-void-typewriter-bottom': 'tombstone', 'obs-void-crt-bottom': 'tombstone', 'obs-void-phone-bottom': 'tombstone', 'obs-void-cassette-bottom': 'tombstone', 'obs-void-gramophone-bottom': 'tombstone', 'obs-void-alarm-bottom': 'tombstone',
+      'void-float-a': 'generic', 'void-float-b': 'generic', 'void-float-c': 'generic', 'void-float-d': 'generic', invaderWave: 'generic', 'void-invader': 'generic',
     },
     fx: { // ASSETS.md §11.2 (12 fps)
       starsRing: { file: 'fx-stars-ring-strip.png', frames: 6, w: 64, h: 32 },
@@ -284,6 +352,7 @@ const CONFIG = {
       school:      ['#26245A', '#6E5694'],
       city:        ['#1C2044', '#4C3E7A'],
       space:       ['#120F2C', '#2B2050'],
+      void:        ['#2C2356', '#7A64AE'], // sky-palettes.json (Art §14.2)
     },
     tintPeak: 0.32,          // overlay alpha at mid-crossfade (0 at both ends)
     banner: { inSeconds: 0.4, outSeconds: 0.4, fromX: 1.15, toX: -1.15, w: 300, h: 90, textX: 150, textBaseline: 47, sparkles: 14 }, // x as a fraction of W
@@ -355,8 +424,25 @@ const CONFIG = {
     'moonrock':       { side: 'bottom', art: 'obs-space-moonrock', shape: 'asteroid' },
     'crystals':       { side: 'bottom', art: 'obs-space-crystals' },
     'alienplant':     { side: 'bottom', art: 'obs-space-alienplant' },
+    // --- v0.6 The Void (ASSETS.md §14). Loaded like v0.4: only when hitboxes.json lists <id>-cap-bottom (tops) /
+    // <id>-cap-top (bottoms); otherwise the neutral hang/stand placeholder is drawn.
+    'obs-void-typewriter-top':    { side: 'top', art: 'obs-void-typewriter-top' },
+    'obs-void-crt-top':           { side: 'top', art: 'obs-void-crt-top' },
+    'obs-void-phone-top':         { side: 'top', art: 'obs-void-phone-top' },
+    'obs-void-cassette-top':      { side: 'top', art: 'obs-void-cassette-top' },
+    'obs-void-gramophone-top':    { side: 'top', art: 'obs-void-gramophone-top' },
+    'obs-void-alarm-top':         { side: 'top', art: 'obs-void-alarm-top' },
+    'obs-void-typewriter-bottom': { side: 'bottom', art: 'obs-void-typewriter-bottom' },
+    'obs-void-crt-bottom':        { side: 'bottom', art: 'obs-void-crt-bottom' },
+    'obs-void-phone-bottom':      { side: 'bottom', art: 'obs-void-phone-bottom' },
+    'obs-void-cassette-bottom':   { side: 'bottom', art: 'obs-void-cassette-bottom' },
+    'obs-void-gramophone-bottom': { side: 'bottom', art: 'obs-void-gramophone-bottom' },
+    'obs-void-alarm-bottom':      { side: 'bottom', art: 'obs-void-alarm-bottom' },
   },
-  objectAliases: { asteroid: 'moonrock', 'tree-branch': 'branch', 'crane-hook': 'cranehook' }, // [build] old ids (TUNING <= v1.7)
+  objectAliases: { asteroid: 'moonrock', 'tree-branch': 'branch', 'crane-hook': 'cranehook', // [build] old ids (TUNING <= v1.7)
+    // TUNING v2.0 placeholder ids -> Art §14 columns
+    'void-top-a': 'obs-void-phone-top', 'void-top-b': 'obs-void-alarm-top', 'void-top-c': 'obs-void-cassette-top',
+    'void-bot-a': 'obs-void-typewriter-bottom', 'void-bot-b': 'obs-void-crt-bottom', 'void-bot-c': 'obs-void-gramophone-bottom' },
   // v1.8 collision rule: each column's hitbox must be unbroken from the screen edge to its gap edge.
   // Checked per id at load; any vertical break -> console.warn + a full-width rect for that id.
   hitboxContinuity: { enabled: true },
@@ -365,6 +451,7 @@ const CONFIG = {
   // v0.3.1 rendering budget (QA P1)
   render: {
     maxDpr: 2,             // backing store capped at 2x CSS px even on DPR-3 phones
+    evictSweepFrames: 30,  // v0.6: also drop off-screen/unneeded tiles every N idle frames (the Void has no next stage, so no build would ever evict the space tiles)
     layerCacheMax: 10,     // hard cap; 3 tiles per layer (current/outgoing, next, transition) + the launch sky
     farLayerScale: 0.5,    // far layers (slow, soft sky + hills) cached at half resolution, upscaled on blit
     skyScale: 0.5,         // launch-sky backdrop likewise
@@ -384,6 +471,7 @@ const CONFIG = {
     school:      { bikes: { enabled: true, spacing: 170, speedFactor: 1.05 } },
     city:        { rain: { enabled: true, count: 60, speed: 500, slant: 125, color: 'rgba(212, 230, 255, 0.5)', width: 1.2 } }, // one batched path, capped count; Art's (-125, +500) px/s
     space:       { stars: { enabled: true, count: 30 }, shootingStars: { enabled: true, intervalMin: 2, intervalMax: 4.5 } },
+    void:        { mist: { enabled: true, count: 7, alpha: 0.22, drift: 10 }, sparkles: { enabled: true, count: 22 } }, // v0.6
   },
 
   // [build] placeholder looks per stage (parallax silhouettes until Art backgrounds exist)
@@ -394,6 +482,9 @@ const CONFIG = {
     school:      { name: 'School Town', sky: ['#22183a', '#5a3f72'], celestial: 'moon', ground: '#3c2f4f', groundTop: '#8a6f9c', layers: ['#3d2f5e', '#33264f', '#2a1f42'] },
     city:        { name: 'Big City', sky: ['#141428', '#3c2f5e'], celestial: 'moon', ground: '#2c2a3e', groundTop: '#5c5a7a', layers: ['#2a2848', '#22203d', '#1b1a33'] },
     space:       { name: 'Outer Space', sky: ['#05040f', '#1c1238'], celestial: 'planet', ground: '#4a4560', groundTop: '#7d7896', layers: ['#ffffff', '#c9b3f0', '#6c6488'] },
+    // v0.6 Nebula Drift (Art concept A palette #2A2150 #7A64AE #F3EAFF #D9C6F5 #6B4E7A #FFB6CC #AEE3C6 #BFE6FF)
+    void:        { name: 'The Void', sky: ['#2C2356', '#7A64AE'], celestial: 'none', ground: '#6B4E7A', groundTop: '#D9C6F5', layers: ['#D9C6F5', '#FFB6CC', '#BFE6FF'],
+                   mist: ['#FFB6CC', '#D9C6F5', '#AEE3C6', '#BFE6FF'], nebula: 0.28, ribbon: '#FFB6CC', ribbonShade: '#E58FAE', cloud: '#F3EAFF', cloudShade: '#D9C6F5' },
   },
 
   // v0.5 'Share score' (game-over button). {name} {score} {stage} {best} are filled in; the URL is sent separately
@@ -407,6 +498,7 @@ const CONFIG = {
     card: { w: 600, h: 800, scale: 2 }, // generated at 2x (1200x1600) with Art's @2x frame
     // Art (ASSETS.md §12): frame per stage (stage id 'school' -> file 'schools'); no-stage file = generic night sky
     frameFile: 'assets/ui-scorecard-frame{stage}@2x.png', frameStageFile: { school: 'schools' },
+    frameGeneric: [],       // v0.6.1: Art's ui-scorecard-frame-void(@2x) is in; list stages here to force the generic frame
     layout: 'assets/scorecard-layout.json',
     font: '"Baloo 2", "Arial Rounded MT Bold", "Nunito", "Trebuchet MS", system-ui, sans-serif', // no runtime font loading
     areas: { // fallback copy of scorecard-layout.json (600x800 coords)
@@ -432,6 +524,15 @@ const CONFIG = {
     font: '"Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif',
     starCount: 40,
     floatTextSeconds: 1.1,
+    // v0.6.2 (QA v0.6.1 N1): long names never overflow. Widths are canvas px (world is 360 wide); button is CSS px.
+    nameFit: {
+      ellipsis: '\u2026',
+      ready:    { maxWidth: 360, pad: 14, size: 20, minSize: 15, step: 1 },   // 'name · Best: N' bottom line
+      hud:      { gap: 12, size: 14, minSize: 11, step: 1 },                 // in-play top-left name (left of 'Best N')
+      gameOver: { pad: 16, size: 18, minSize: 14, step: 1 },                 // inside the game-over panel
+      list:     { topStagePx: 12, topStageLines: 2 }, // v0.6.3 (QA N2): profiles list / top-10 names fit their cell; stage + date on max 2 lines
+      button:   { maxWidth: 220, padX: 16, iconW: 26, gap: 6, border: 2, fontSize: 16 }, // player pill (matches .gg-btn)
+    },
   },
 
   assets: { // [build] Art's sprites (assets/ASSETS.md). Sizes are 1x sprite px.
@@ -497,18 +598,43 @@ const CONFIG = {
       rain:         { file: 'amb-city-rain-0.png', w: 128, h: 128, frames: [0], fps: 0, json: ['ambient'] },
       star:         { file: 'amb-space-star-strip.png', w: 16, h: 16, frames: [0, 1, 2, 1], fps: 4, json: ['ambient'] },
       starfield:    { file: 'amb-space-starfield.png', w: 180, h: 180, frames: [0], fps: 0, json: ['ambient'], parallax: 0.1 },
+      // v0.6 Void floaters / invaders: loaded only once hitboxes.json lists them (placeholders until then)
+      // Art §15.1: 4-frame wobble strips, hit circle fixed at (20,20)
+      'void-float-a': { file: 'obs-void-float-cassette-strip.png', w: 40, h: 40, frames: [0, 1, 2, 3], fps: 6, json: ['hazards', 'void-float-a'] },
+      'void-float-b': { file: 'obs-void-float-clock-strip.png',    w: 40, h: 40, frames: [0, 1, 2, 3], fps: 6, json: ['hazards', 'void-float-b'] },
+      'void-float-c': { file: 'obs-void-float-phone-strip.png',    w: 40, h: 40, frames: [0, 1, 2, 3], fps: 6, json: ['hazards', 'void-float-c'] },
+      'void-float-d': { file: 'obs-void-float-floppy-strip.png',   w: 40, h: 40, frames: [0, 1, 2, 3], fps: 6, json: ['hazards', 'void-float-d'] },
+      // Art §15.2: invader types a (mint), b (pink), c (lilac) share size + hitbox; pop + Void warning icon are decorative
+      invader:      { file: 'event-void-invader-strip.png',   w: 40, h: 40, frames: [0, 1], fps: 4, json: ['events', 'void-invader'] },
+      invaderB:     { file: 'event-void-invader-b-strip.png', w: 40, h: 40, frames: [0, 1], fps: 4, json: ['events', 'void-invader'] },
+      invaderC:     { file: 'event-void-invader-c-strip.png', w: 40, h: 40, frames: [0, 1], fps: 4, json: ['events', 'void-invader'] },
+      invaderPop:   { file: 'event-void-invader-pop-strip.png', w: 64, h: 64, frames: [0, 1, 2, 3, 4, 5], fps: 12, json: ['events', 'void-invader-pop'] },
+      warningVoid:  { file: 'ui-event-warning-void-strip.png', w: 40, h: 40, frames: [0, 1], fps: 4, json: ['events', 'warning-void'] },
     },
+    // v0.6: Void-only v0.5-style art (banner, burst, badge 7, score-card frame) is requested only once Art's
+    // Void set exists (a hitboxes.json key starting with detectPrefix, or 'void' in backgrounds.stages): no 404s.
+    voidArt: { stage: 'void', detectPrefix: 'obs-void-', transitions: ['space-void'] }, // + bg-void-* / bg-trans-space-void-* (hitboxes.json backgrounds doesn't list them yet)
     backgrounds: {
       load: true,            // only stages listed in hitboxes.json backgrounds.stages are fetched (no 404s)
       file: 'bg-{stage}-{layer}.png', // Art: 720x640 world px tiles in png/{1x,2x}/, scroll horizontally
       tileWidth: 720,
       layers: ['far', 'mid', 'near'],
       parallax: { far: 0.1, mid: 0.3, near: 0.6 },              // Art's scroll factors
-      parallaxByStage: { space: { far: 0.05, mid: 0.15, near: 0.5 } },
+      parallaxByStage: { space: { far: 0.05, mid: 0.15, near: 0.5 }, void: { far: 0.05, mid: 0.15, near: 0.5 } }, // Art §14.2
       transFile: 'bg-trans-{from}-{to}-{layer}.png', // used at each layer's next tile edge (ASSETS.md §7a)
       transMaxSeconds: 3,    // mid/far: use the transition tile only if the next edge is this close...
       fadeSeconds: 1.5,      // ...otherwise crossfade outgoing -> incoming tiles over this long
       alwaysTransLayers: ['near'],
+      // v0.6.1: optional per-layer geometry for trimmed art, { stage: { layer: { yOffset, height, stretch, fill } } } in world px.
+      // yOffset: top of the file's band; height: band height (file scaled to it); stretch: true -> band runs to the bottom (H);
+      // only yOffset -> native aspect. fill: 'gradient' on far paints the stage sky (looks[stage].sky) under the layers.
+      // hitboxes.json backgrounds.layerMeta (same shape, Art's stage ids) is read too; CONFIG wins. Empty = full-height files.
+      layerMeta: { void: {} },
+      // v0.6.1: Art §14.2 memory-lite Void, drawn from hitboxes.json backgrounds.void (stacks of parts per 720 slot,
+      // no layer cache, the old full bg-void-{layer} tiles are not loaded). lite1xOnHiDpi: these parts load from png/1x on
+      // 2x screens (soft art; 2x decoded set 8.5 -> ~3.7 MiB). The warp mist strip is already 1x (warp.mist.folder).
+      voidParts: { enabled: true, stage: 'void', glints: true, smoothing: true,
+        lite1xOnHiDpi: ['bg-void-mid-upper.png', 'bg-void-mid-lower.png', 'bg-void-far-stars.png'] },
       artStageIds: { school: 'schools' }, // Art's bg files and hitboxes.json backgrounds still say 'schools'
     },
   },
@@ -527,6 +653,9 @@ const CONFIG = {
     text: '#ffffff', textShadow: 'rgba(30, 20, 51, 0.6)', panelBg: 'rgba(30, 20, 51, 0.72)',
     accent: '#ffb3c9', sparkle: '#fff3b0', warning: '#ffcf5a',
     bat: '#5a4a78', pumpkin: '#ffb37a', pumpkinStem: '#7fbf8a', skull: '#f3eefc', alien: '#a8e6a1',
+    // v0.6 Void placeholders (concept A palette)
+    vCream: '#F3EAFF', vLilac: '#D9C6F5', vPink: '#FFB6CC', vMint: '#AEE3C6', vBlue: '#BFE6FF', vInk: '#6B4E7A', vDeep: '#4A3358',
+    invader: '#AEE3C6', invaderEye: '#2A2150',
   },
 };
 
@@ -699,6 +828,20 @@ window.ScoreService = ScoreService;
   const easeInOut = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
   const easeIn = t => t * t;
   const easeOut = t => 1 - (1 - t) * (1 - t);
+  const uiSeg = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+  const graphemes = str => (uiSeg ? Array.from(uiSeg.segment(String(str)), x => x.segment) : Array.from(String(str))); // v0.6.2
+  // v0.6.2: shrink font (size->minSize) then trim whole graphemes + '…' until measure(name)+fixedW <= maxW.
+  function fitName(mctx, name, fixedW, maxW, size, minSize, step, fontFor) {
+    const NF = CONFIG.ui.nameFit, g = graphemes(name);
+    let px = size; mctx.font = fontFor(px);
+    const w = t => mctx.measureText(t).width;
+    while (px - step >= minSize && w(name) + fixedW(px) > maxW) { px -= step; mctx.font = fontFor(px); }
+    if (w(name) + fixedW(px) <= maxW) return { text: name, size: px, truncated: false, kept: g.length };
+    let n = g.length - 1;
+    while (n > 0 && w(g.slice(0, n).join('') + NF.ellipsis) + fixedW(px) > maxW) n--;
+    return { text: g.slice(0, n).join('') + NF.ellipsis, size: px, truncated: true, kept: n };
+  }
+  const clipGraphemes = (str, n) => (uiSeg ? Array.from(uiSeg.segment(str), x => x.segment) : Array.from(str)).slice(0, n).join(''); // v0.6.1
   function weightedPick(map) {
     const entries = Object.entries(map || {}).filter(([, w]) => w > 0);
     if (!entries.length) return null;
@@ -759,11 +902,13 @@ window.ScoreService = ScoreService;
     const o = CONFIG.objects[CONFIG.objectAliases[id] || id];
     if (!o || o.side !== side) console.warn(`[stages] ${st.id}.${side}: '${id}' is ${o ? 'a ' + o.side + ' object' : 'not in CONFIG.objects'}`);
   }
-  function stageIndexForPairs(pairs) {
+  function stageIndexForPairs(pairs) { // v0.6: score-only stages (no startAt, e.g. the Void) are never reached by pairs
     let idx = 0;
-    STAGES.forEach((s, i) => { if (pairs >= s.startAt) idx = i; });
+    STAGES.forEach((s, i) => { if (s.startAt != null && pairs >= s.startAt) idx = i; });
     return idx;
   }
+  const LAUNCH_ID = CONFIG.launch.target || 'space', WARP = CONFIG.warp;
+  const stageStartPairs = i => (STAGES[i].startAt != null ? STAGES[i].startAt : STAGES[i].id === WARP.target ? WARP.qaStartPairs : 0); // QA hooks
   function parseStage(v) {
     if (v == null) return null;
     const n = Number(v);
@@ -775,6 +920,7 @@ window.ScoreService = ScoreService;
   // ---- Asset preload --------------------------------------------------------------
   const A = CONFIG.assets;
   const sprites = {
+    bgMeta: {}, bgUnloaded: {}, voidParts: null, // v0.6.1
     specials: {},      // v1.9 specials art (pickups, rush ghost, heart, frost, HUD)
     res: 1,
     ghost: { normal: null, golden: null },
@@ -832,6 +978,9 @@ window.ScoreService = ScoreService;
     const all = hbJob.then(hb => {
       sprites.hitboxes = hb;
       const has = k => !!(hb && hb[k]);
+      const VA = A.voidArt; // v0.6: has Art's Void set landed? (gates the Void banner / burst / badge / card frame)
+      sprites.voidArt = !!(hb && (Object.keys(hb).some(k => k.startsWith(VA.detectPrefix)) || (hb.void && typeof hb.void === 'object') ||
+        ((hb.backgrounds && hb.backgrounds.stages) || []).includes(VA.stage)));
       const jobs = [];
       for (const kind of ['normal', 'golden']) {
         jobs.push(loadImage(dir + A.ghost.strips[kind]).then(img => { sprites.ghost[kind] = img; }));
@@ -859,17 +1008,34 @@ window.ScoreService = ScoreService;
         jobs.push(loadImage(dir + sh.file).then(img => { if (img) sprites.sheets[name] = { img, def: sh, json: node }; }));
       }
       const bgList = (hb && hb.backgrounds && hb.backgrounds.stages) || [];
+      sprites.bgMeta = (hb && hb.backgrounds && hb.backgrounds.layerMeta) || {};
       const artId = id => (A.backgrounds.artStageIds || {})[id] || id;
       if (A.backgrounds.load) {
+        const voidBg = id => id === A.voidArt.stage && sprites.voidArt; // v0.6: Art §14 bg set (not yet in hitboxes.json backgrounds)
+        const VP = A.backgrounds.voidParts, vSpec = VP && VP.enabled && hb && hb.backgrounds && hb.backgrounds.void;
+        if (vSpec) { // v0.6.1: Art §14.2 parts (data-driven)
+          const vp = sprites.voidParts = { spec: vSpec, img: {}, need: [], mb: 0 };
+          const want = (f, need) => {
+            if (vp.img[f] !== undefined) return; vp.img[f] = null; if (need) vp.need.push(f);
+            const d = folder === '2x' && VP.lite1xOnHiDpi.includes(f) ? `${A.pngDir}/1x/` : dir;
+            jobs.push(loadImage(d + f).then(img => { if (!img) return; vp.img[f] = img; vp.mb += img.naturalWidth * img.naturalHeight * 4 / 1048576; }));
+          };
+          for (const layer of A.backgrounds.layers) for (const p of vSpec[layer] || []) {
+            if (p.file) want(p.file, true);
+            if (p.kind === 'sprites' && VP.glints) for (const sp of Object.values(p.sprites || {})) want(sp.file, false);
+          }
+        }
         for (const st of STAGES) for (const layer of A.backgrounds.layers) {
-          if (!bgList.includes(artId(st.id))) continue;
+          if (vSpec && st.id === VP.stage) continue; // v0.6.1: parts instead of the full tiles
+          if (!bgList.includes(artId(st.id)) && !voidBg(st.id)) continue;
           const f = A.backgrounds.file.replace('{stage}', artId(st.id)).replace('{layer}', layer);
           jobs.push(loadImage(dir + f).then(img => { if (img) sprites.bg[`${st.id}-${layer}`] = img; }));
         }
         const transList = (hb && hb.backgrounds && hb.backgrounds.transitions) || [];
         for (let i = 0; i + 1 < STAGES.length; i++) for (const layer of A.backgrounds.layers) {
           const a = STAGES[i].id, b = STAGES[i + 1].id;
-          if (!transList.includes(`bg-trans-${artId(a)}-${artId(b)}-*`)) continue; // city -> space: the rocket cutscene is the transition
+          if (a === WARP.from && b === WARP.target && !WARP.useTransitionTiles) continue; // v0.6.1: warp cuts under the mist
+          if (!transList.includes(`bg-trans-${artId(a)}-${artId(b)}-*`) && !(sprites.voidArt && A.voidArt.transitions.includes(`${a}-${b}`))) continue; // city -> space: the rocket cutscene is the transition
           const f = A.backgrounds.transFile.replace('{from}', artId(a)).replace('{to}', artId(b)).replace('{layer}', layer);
           jobs.push(loadImage(dir + f).then(img => { if (img) sprites.bg[`trans-${a}-${b}-${layer}`] = img; }));
         }
@@ -915,11 +1081,13 @@ window.ScoreService = ScoreService;
     for (const [k, f] of Object.entries(DA.fx)) put(sprites.fx, k, f.file);
     put(sprites.ui, 'bannerBlank', TA.bannerBlank); put(sprites.ui, 'badgeBlank', TA.badgeBlank); put(sprites.ui, 'swoosh', TA.swoosh.file);
     STAGES.forEach((st, i) => {
+      if (st.id === A.voidArt.stage && !sprites.voidArt) return; // v0.6: placeholders (blank banner + drawn badge) until Art's Void set exists
       put(sprites.ui, `banner-${st.id}`, TA.banner.replace('{stage}', sid(st.id)));
       put(sprites.ui, `bannerBlank-${st.id}`, TA.bannerStageBlank.replace('{stage}', sid(st.id)));
       put(sprites.ui, `burst-${st.id}`, TA.burst.file.replace('{stage}', sid(st.id)));
       put(sprites.ui, `badge-${i + 1}`, TA.badge.replace('{n}', i + 1));
     });
+    if (sprites.voidArt) { const M = CONFIG.warp.mist; put(sprites.ui, 'warpMist', `../${M.folder}/${M.file}`); } // v0.6 Art §14.3 overlay (1x)
     const SA = CONFIG.specials.art; // v1.9 specials (Art §13); missing -> placeholder drawing
     for (const k of ['rush', 'extraLife', 'slowMo']) { put(sprites.specials, 'pickup-' + k, SA.pickup[k]); put(sprites.specials, 'hud-' + k, SA.hud[k]); }
     for (const k of ['ghostRush', 'rushAura', 'candyBurst', 'heart', 'heartPop', 'heartBreak', 'frostBurst', 'frostVignette']) put(sprites.specials, k, SA[k].file);
@@ -1021,8 +1189,9 @@ window.ScoreService = ScoreService;
   game.sprites = sprites;
 
   const stage = () => STAGES[game.stageIndex];
-  function physics() { // stage override (space) merged over CONFIG.ghost
-    return Object.assign({}, CONFIG.ghost, stage().physics || {});
+  function physics() { // stage override (space) merged over CONFIG.ghost; 'normal' (the Void) = CONFIG.ghost as is
+    const o = stage().physics;
+    return Object.assign({}, CONFIG.ghost, o && typeof o === 'object' ? o : {});
   }
   function newSpecials() { // v1.9 specials state (per run)
     return { since: { rush: 0, extraLife: 0, slowMo: 0 }, last: { rush: null, extraLife: null, slowMo: null }, sinceAny: 0, lastAny: null,
@@ -1046,8 +1215,13 @@ window.ScoreService = ScoreService;
     return false;
   }
   function currentSpeed() {
-    return speedFor(speedHoldActive() ? game.speedHoldPairs : game.pairs);
+    const v = speedFor(speedHoldActive() ? game.speedHoldPairs : game.pairs);
+    const sp = stage().speed; // v2.0: the Void ramps on from speedFor (= 240 cap), counted in pairs from Void entry
+    if (sp && game.voidBasePairs != null) return Math.min(sp.max, v + Math.floor(Math.max(0, game.pairs - game.voidBasePairs) / sp.stepEveryPairs) * sp.stepAmount);
+    return v;
   }
+  const stageGap = () => (stage().gap != null ? stage().gap : gapFor(game.pairs));             // v2.0: the Void holds 145
+  const stageSpacing = () => (stage().spacing != null ? stage().spacing : spacingFor(game.pairs)); // v2.0: the Void holds 190
   const transitionActive = () => (game.banner && game.banner.t < CONFIG.stages.transition.bannerSeconds) || game.easyLeft > 0 || game.skipSlots > 0 || !!game.cutscene;
 
   function centreRange() {
@@ -1058,7 +1232,9 @@ window.ScoreService = ScoreService;
     const def = CONFIG.events.list[stage().id];
     let at = def ? def.firesAt : 0;
     // v0.4.2: zone after a score-based launch: firesAt is relative to the pairs count at lift-off
-    if (def && stage().id === CONFIG.stages.loopFrom && game.spaceBasePairs != null) at = game.spaceBasePairs + (def.firesAfterLaunchPairs != null ? def.firesAfterLaunchPairs : def.firesAt - STAGES[stageIndexById(CONFIG.stages.loopFrom)].startAt);
+    if (def && stage().id === LAUNCH_ID && game.spaceBasePairs != null) at = game.spaceBasePairs + (def.firesAfterLaunchPairs != null ? def.firesAfterLaunchPairs : def.firesAt - STAGES[stageIndexById(LAUNCH_ID)].startAt);
+    // v2.0: the Void's event counts from Void entry (pairs at the warp)
+    if (def && def.firesAfterEntryPairs != null) at = (game.voidBasePairs != null ? game.voidBasePairs : game.pairs) + def.firesAfterEntryPairs;
     game.eventNext = def ? { zone: stage().id, score: at, def } : null;
   }
 
@@ -1078,15 +1254,22 @@ window.ScoreService = ScoreService;
     }
   }
 
-  function startBreather() {
+  function startBreather(keepBanner) {
     const T = CONFIG.stages.transition;
-    game.banner = { text: CONFIG.looks[stage().id].name, t: 0, stage: stage().id, index: game.stageIndex };
+    if (!(keepBanner && game.banner && game.banner.stage === stage().id)) game.banner = { text: CONFIG.looks[stage().id].name, t: 0, stage: stage().id, index: game.stageIndex };
     game.queue.length = 0; // drop leftover breathers; the transition is the breather
     game.easyLeft = T.easyPairs;
     game.skipSlots = T.emptySlots;
   }
 
+  function reloadUnloadedBg() { // v0.6.1: the warp unloads the space layers; a new run may reach space again
+    for (const [key, src] of Object.entries(sprites.bgUnloaded)) {
+      delete sprites.bgUnloaded[key];
+      loadImage(src).then(img => { if (img && !sprites.bg[key]) sprites.bg[key] = img; });
+    }
+  }
   function reset() {
+    reloadUnloadedBg(); warmQ = null;
     game.state = 'ready';
     game.paused = false;
     game.newBest = false;
@@ -1108,6 +1291,7 @@ window.ScoreService = ScoreService;
     game.speedHoldPairsLeft = 0;
     game.event = null; game.eventDue = null; game.eventLog = [];
     game.cutscene = null; game.launches = 0; game.launchWaitT = 0; game.spaceBasePairs = null; game.launchLog = []; // QA: every run can launch once
+    game.warps = 0; game.warpWaitT = 0; game.voidBasePairs = null; game.warpLog = []; // v0.6: every run can warp once
     game.tapCue = 0;
     game.pairsSincePickup = 0;
     game.forcePickupNext = qaPickup === '1';
@@ -1117,9 +1301,10 @@ window.ScoreService = ScoreService;
     const qs = parseStage(qaStage);
     const startIdx = qs != null ? qs : 0;
     game.score = 0;
-    game.pairs = STAGES[startIdx].startAt; // QA hooks set PAIRS
+    game.pairs = stageStartPairs(startIdx); // QA hooks set PAIRS
     game.physAcc = 0;
     game.stageIndex = startIdx;
+    if (STAGES[startIdx].id === WARP.target) { game.launches = 1; game.warps = 1; game.voidBasePairs = game.pairs; } // QA ?stage=void: already arrived
     game.fade = null;
     scheduleZoneEvent();
     if (qaEvent && qaEvent !== 'rocket') {
@@ -1179,7 +1364,8 @@ window.ScoreService = ScoreService;
         game.queue.push({ centre: c, spacingDelta: (i > 0 && p.spacingDelta) ? p.spacingDelta : 0, pattern: p.name });
       });
       last = game.queue[game.queue.length - 1].centre;
-      for (let i = 0; i < CONFIG.patterns.breatherPairs; i++) {
+      const nb = stage().breatherPairs != null ? stage().breatherPairs : CONFIG.patterns.breatherPairs; // v2.0: the Void uses 1
+      for (let i = 0; i < nb; i++) {
         last = randomCentre(last);
         game.queue.push({ centre: last, spacingDelta: 0, pattern: 'breather' });
       }
@@ -1222,6 +1408,8 @@ window.ScoreService = ScoreService;
       return { id, shape: 'tomb', source: 'shape' }; // tomb ids (graveyard only) keep the tombstone placeholder
     }
   }
+  const objectRe = new RegExp(CONFIG.stages.pairRule ? CONFIG.stages.pairRule.objectOf : '^$');
+  function objectOf(id) { id = CONFIG.objectAliases[id] || id; const m = objectRe.exec(id); return m ? m[1] : id; }
   function bottomWeights(st) {
     return st.bottom || CONFIG.stages.bottom;
   }
@@ -1330,13 +1518,21 @@ window.ScoreService = ScoreService;
   function spawnPair(x, entry) {
     const st = stage();
     const prev = game.cols[game.cols.length - 1];
-    const gap = gapFor(game.pairs) + (entry.easy ? CONFIG.stages.transition.easyGapBonus : 0);
+    const gap = stageGap() + (entry.easy ? CONFIG.stages.transition.easyGapBonus : 0);
     const p = {
       x, centre: entry.centre, gap, passed: false, pattern: entry.pattern || 'random', easy: !!entry.easy, stage: st.id,
-      top: resolveColumn(weightedPick(st.top), 'top'),
-      bottom: resolveColumn(weightedPick(bottomWeights(st)), 'bottom'),
+      top: null, bottom: null,
       pickup: null,
     };
+    { // v0.6.1 pairRule (QA F3): the bottom never repeats the top's object
+      const topId = weightedPick(st.top), R = CONFIG.stages.pairRule;
+      let bw = bottomWeights(st);
+      if (R && R.distinctObjects && topId) {
+        const o = objectOf(topId), f = Object.fromEntries(Object.entries(bw).filter(([k]) => objectOf(k) !== o));
+        if (Object.keys(f).length) bw = f;
+      }
+      p.top = resolveColumn(topId, 'top'); p.bottom = resolveColumn(weightedPick(bw), 'bottom');
+    }
     // v1.9 specials roll: one on screen, global gap, none during transition / event / launch or an active Rush / Chill
     const SPc = CONFIG.specials, sp = game.sp;
     for (const k of SPc.order) sp.since[k]++;
@@ -1461,6 +1657,40 @@ window.ScoreService = ScoreService;
       },
       lane() { return { y: 90, label: 'Meteors!' }; },
     },
+    // v2.0 Invader Wave (the Void): 2 rows (formations) of pixel invaders sweep right -> left, each a full-height
+    // curtain with ONE clear lane >= laneHeight tall (measured between invader edges, wiggle included).
+    invaderWave: {
+      start(ev) {
+        const d = ev.def, sh = sprites.sheets.invader, r = sh && sh.json.r ? sh.json.r : d.r;
+        const inv = [], lanes = [];
+        let lane = clamp(game.ghost.y + hitboxOffsetY, d.laneMinY, d.laneMaxY);
+        for (let w = 0; w < d.waves; w++) {
+          if (w > 0) { const sh2 = rand(d.laneShiftMin, d.laneShiftMax) * (Math.random() < 0.5 ? -1 : 1); lane = clamp(lane + sh2, d.laneMinY, d.laneMaxY); if (Math.abs(lane - lanes[w - 1]) < d.laneShiftMin) lane = clamp(lanes[w - 1] - sh2, d.laneMinY, d.laneMaxY); }
+          lanes.push(lane);
+          for (let yc = r; yc < GROUND_Y + r; yc += d.spacing) {
+            if (Math.abs(yc - lane) < d.laneHeight / 2 + r + d.wiggle) continue;
+            inv.push({ T: d.waveCrossAt[w], yc, r, wave: w, ph: rand(0, TAU), gone: false });
+          }
+        }
+        const pool = d.rowSheets.map((k, i) => i), rows = [];
+        for (let w = 0; w < d.waves; w++) { if (!pool.length) d.rowSheets.forEach((k, i) => pool.push(i)); rows.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]); }
+        ev.data = { inv, lanes, r, rows, pops: [] };
+      },
+      pos(ev, m) { const d = ev.def; return { x: CONFIG.ghost.x + d.vx * (ev.t - m.T), y: m.yc + d.wiggle * Math.sin(ev.t * 6 + m.ph) }; },
+      update(ev, dt) {
+        for (const m of ev.data.inv) if (!m.gone && this.pos(ev, m).x < -40) m.gone = true;
+        for (const p of ev.data.pops) p.t += dt;
+        ev.data.pops = ev.data.pops.filter(p => p.t < ev.def.popSeconds);
+      },
+      smash(ev, cx, cy, r) { // Rush: invaders it touches pop (Art's pop fx), +smashBonus each
+        for (const m of ev.data.inv) { if (m.gone) continue; const p = this.pos(ev, m); if ((p.x - cx) ** 2 + (p.y - cy) ** 2 < (r + m.r) ** 2) { m.gone = true; ev.data.pops.push({ x: p.x, y: p.y, t: 0 }); smash(p.x, p.y); } }
+      },
+      done(ev) { return ev.data.inv.every(m => m.gone); },
+      hits(ev, cx, cy, r) {
+        return ev.data.inv.some(m => { if (m.gone) return false; const p = this.pos(ev, m); return (p.x - cx) ** 2 + (p.y - cy) ** 2 < (r + m.r) ** 2; });
+      },
+      lane() { return { y: 90, label: 'Invaders!' }; },
+    },
     // batSwarm, pumpkinRoll, sweetShower, nightBus: TODO(v0.4) — stubs (logged only)
   };
 
@@ -1470,7 +1700,8 @@ window.ScoreService = ScoreService;
     const handler = EVENTS[ev.id];
     const G = CONFIG.ghost, tw = CONFIG.tombstones.width;
     ev.t += dt;
-    if (game.launches === 0 && game.stageIndex < stageIndexById(CONFIG.stages.loopFrom) && game.score >= CONFIG.launch.atScore) game.launchWaitT += dt / (game.sp.slowF || 1); // real seconds (Chill slows dt)
+    if (game.launches === 0 && game.stageIndex < stageIndexById(LAUNCH_ID) && game.score >= CONFIG.launch.atScore) game.launchWaitT += dt / (game.sp.slowF || 1); // real seconds (Chill slows dt)
+    if (game.warps === 0 && stage().id === WARP.from && game.score >= WARP.atScore) game.warpWaitT += dt / (game.sp.slowF || 1); // v0.6: same rule for the warp
     if (ev.phase === 'waiting') {
       // fairness: start only once nothing is left ahead of the ghost
       const clear = game.cols.every(p => p.x + tw < G.x - hitboxRadius - 4) && game.hazards.every(h => h.x + h.r < G.x - hitboxRadius - 4);
@@ -1485,7 +1716,7 @@ window.ScoreService = ScoreService;
         game.eventLog.push({ id: ev.id, zone: ev.zone, scheduled: ev.scheduled, pairs: game.pairs, status: 'survived', bonus: pts });
         game.event = null;
         rescheduleAfter({ def: ev.def, zone: ev.zone, score: ev.scheduled, forced: ev.forced });
-        game.slotX = W + CONFIG.tombstones.spawnMargin - spacingFor(game.pairs); // resume right away
+        game.slotX = W + CONFIG.tombstones.spawnMargin - stageSpacing(); // resume right away
         game.lastSlotWasPair = false;
       }
     }
@@ -1558,16 +1789,66 @@ window.ScoreService = ScoreService;
       g.vy = 0;
       game.tapCue = CONFIG.ui.tapCueSeconds;
       startBreather();
-      game.slotX = W + CONFIG.tombstones.spawnMargin - spacingFor(game.pairs); // first slot = the empty slot
+      game.slotX = W + CONFIG.tombstones.spawnMargin - stageSpacing(); // first slot = the empty slot
       game.lastSlotWasPair = false;
       game.lastCompletedCutscene = { speeds: c.speeds };
+    }
+  }
+
+  // ---- v0.6 warp cutscene (space -> The Void): stars blur into pastel mist -------------------------
+  function startWarp() {
+    for (const p of game.cols) poof(p.x + CONFIG.tombstones.width / 2, p.centre);
+    for (const h of game.hazards) poof(h.x, hazardY(h, worldNow()));
+    game.cols.length = 0; game.hazards.length = 0; game.queue.length = 0;
+    game.pendingStage = null; game.skipSlots = 0; game.easyLeft = 0;
+    if (game.event) { game.eventLog.push({ id: game.event.id, zone: game.event.zone, scheduled: game.event.scheduled, pairs: game.pairs, status: 'cancelled' }); game.event = null; }
+    game.eventDue = null; game.eventNext = null;
+    const look = CONFIG.looks[WARP.target] || {}, cols = look.mist || ['#FFB6CC'];
+    game.cutscene = { kind: 'warp', t: 0, startY: game.ghost.y, switched: false, speeds: [], from: stage().id,
+      streaks: Array.from({ length: WARP.streakCount }, () => ({ x: rand(0, W), y: rand(0, GROUND_Y), k: rand(0.5, 1.2) })),
+      blobs: Array.from({ length: WARP.mistBlobs }, (_, i) => ({ x: rand(-40, W + 60), y: rand(40, GROUND_Y + 20), r: rand(70, 140), c: i % cols.length, v: rand(0.6, 1.2) })),
+      ribbons: Array.from({ length: WARP.ribbons }, (_, i) => ({ x: 50 + i * (W - 100) / Math.max(1, WARP.ribbons - 1) + rand(-20, 20), len: rand(160, 300), ph: rand(0, TAU) })) };
+    game.warps++;
+    game.voidBasePairs = game.pairs;
+    game.warpLog.push({ score: game.score, pairs: game.pairs, from: stage().id, t: game.time });
+    game.ghost.prevY = game.ghost.y;
+    floatText(WARP.achievement, W / 2, 150, CONFIG.colors.warning, 2);
+  }
+  function warpS(c) { return c.t * 2.0 / WARP.cutsceneSeconds; } // timeline is authored for a 2.0 s cutscene
+  function releaseMistBuf() { if (typeof mistBuf !== 'undefined' && mistBuf) { mistBuf.width = mistBuf.height = 0; mistBuf = null; } }
+  function updateWarp(dt) {
+    const c = game.cutscene, g = game.ghost, T = WARP.timeline;
+    c.t += dt;
+    const u = Math.min(1, c.t / WARP.cutsceneSeconds), s = warpS(c);
+    const k = easeInOut(clamp(s / T.ghostSettle, 0, 1));
+    c.gx = CONFIG.ghost.x;
+    g.y = lerp(c.startY, H / 2 - 40, k) + Math.sin(game.time * CONFIG.ghost.bobSpeed) * CONFIG.ghost.bobAmplitude * k * 0.5;
+    g.vy = 0; g.tilt += (0 - g.tilt) * Math.min(1, CONFIG.ghost.tiltLerp * dt); g.prevY = g.y; game.physAcc = 0;
+    c.speeds.push({ pairs: game.pairs, speed: game.speed, expected: speedFor(game.pairs) });
+    const M = WARP.mist, ti = stageIndexById(WARP.target);
+    if (!c.bannered && s >= T.mistStart) { // Art §14.3: the mist overlay starts with the stage banner
+      c.bannered = true; c.mistAt = game.time;
+      game.banner = { text: CONFIG.looks[WARP.target].name, t: 0, stage: WARP.target, index: ti };
+    }
+    if (!c.switched && s >= T.mistStart + M.switchFrame / M.fps) { c.switched = true; c.switchS = s; enterStage(ti, true); } // bg switches at mist frame 3
+    if (u >= 1) {
+      if (!c.switched) enterStage(stageIndexById(WARP.target), true);
+      if (c.snap) { c.snap.width = c.snap.height = 0; c.snap = null; } releaseMistBuf();
+      g.y = g.prevY = H / 2 - 40; g.vy = 0; g.tilt = 0;
+      game.cutscene = null;
+      game.fade = null;
+      game.tapCue = CONFIG.ui.tapCueSeconds;
+      startBreather(true); // then: 'transition' (the banner already started with the mist)
+      game.slotX = W + CONFIG.tombstones.spawnMargin - stageSpacing();
+      game.lastSlotWasPair = false;
+      game.lastCompletedWarp = { speeds: c.speeds };
     }
   }
 
   // ---- Progress checks (stage / launch / events) -------------------------------------------
   function checkProgress() {
     if (game.cutscene) return;
-    const launchIdx = stageIndexById(CONFIG.stages.loopFrom);
+    const launchIdx = stageIndexById(LAUNCH_ID);
     let target = stageIndexForPairs(game.pairs);
     if (launchIdx >= 0 && target >= launchIdx) target = launchIdx - 1; // space is only ever reached by the launch
     // v0.4.2: the launch fires once, when the displayed score reaches atScore (or pairs reach space.startAt),
@@ -1577,7 +1858,14 @@ window.ScoreService = ScoreService;
     if (launchIdx >= 0 && game.stageIndex < launchIdx && game.launches === 0 && due) {
       game.pendingStage = null; game.eventDue = null; game.eventNext = null; // no new stage/event before the launch
       if (game.event && game.event.phase === 'active' && game.launchWaitT < L.eventFinishMaxSeconds) return; // updateEvent counts launchWaitT
-      startLaunch(); return; // rocket launch into the final zone (pairs cleared, no waiting)
+      startLaunch(); return; // rocket launch into space (pairs cleared, no waiting)
+    }
+    // v0.6 warp: once per run, from space, when the DISPLAYED score reaches warp.atScore (a bonus jump past it counts)
+    const warpTo = stageIndexById(WARP.target);
+    if (warpTo >= 0 && stage().id === WARP.from && game.warps === 0 && game.score >= WARP.atScore) {
+      game.pendingStage = null; game.eventDue = null; game.eventNext = null;
+      if (game.event && game.event.phase === 'active' && game.warpWaitT < WARP.eventFinishMaxSeconds) return;
+      startWarp(); return;
     }
     if (target > game.stageIndex && game.pendingStage == null) {
       game.pendingStage = target;
@@ -1611,6 +1899,7 @@ window.ScoreService = ScoreService;
       game.state = 'playing';
       flap();
       if (qaEvent === 'rocket') { game.pairs = Math.max(game.pairs, CONFIG.launch.atScore); }
+      if (qaEvent === 'warp') { game.score = Math.max(game.score, WARP.atScore); }
     } else if (game.state === 'playing') {
       if (game.cutscene) return; // taps ignored during the launch cutscene
       flap();
@@ -1774,7 +2063,7 @@ window.ScoreService = ScoreService;
     game.worldSpeed = speed * (dt ? wdt / dt : 1);
     game.dist += speed * wdt;
     if (game.cutscene) {
-      updateCutscene(dt);
+      if (game.cutscene.kind === 'warp') updateWarp(dt); else updateCutscene(dt);
     } else if (game.sp.knock) {
       // Extra Life knock-back owns the ghost's y for 0.3 s (vy 0); normal physics resume afterwards
     } else {
@@ -1805,7 +2094,7 @@ window.ScoreService = ScoreService;
           game.spawnTimer -= wdt;
           if (game.spawnTimer <= 0) spawnSlot(W + CONFIG.tombstones.spawnMargin);
         } else {
-          const spacing = spacingFor(game.pairs) + (peekEntry().spacingDelta || 0);
+          const spacing = stageSpacing() + (peekEntry().spacingDelta || 0);
           if (game.slotX + spacing <= W + CONFIG.tombstones.spawnMargin) spawnSlot(game.slotX + spacing);
         }
       }
@@ -1835,6 +2124,7 @@ window.ScoreService = ScoreService;
           die('hazard:' + h.type, h.type); if (game.state !== 'playing') return;
         }
       }
+      if (game.event && game.event.phase === 'active' && game.goldenModeT > 0 && EVENTS[game.event.id].smash) EVENTS[game.event.id].smash(game.event, G.x, hy, r);
       if (game.event && game.event.phase === 'active' && !specialSafe() && EVENTS[game.event.id].hits(game.event, G.x, hy, r)) {
         die('event:' + game.event.id, game.event.id); if (game.state !== 'playing') return;
       }
@@ -1884,6 +2174,8 @@ window.ScoreService = ScoreService;
     for (let i = 0; i < birds.count; i++) amb.birds.push(perchBird({}, rand(40, W + 200)));
     for (let i = 0; i < CONFIG.ambient.countryside.fireflies.count; i++) amb.fireflies.push({ x: rand(0, W), y: rand(250, GROUND_Y - 20), ph: rand(0, TAU), sp: rand(0.5, 1.2) });
     for (let i = 0; i < CONFIG.ambient.city.rain.count; i++) amb.rain.push({ x: rand(0, W + 100), y: rand(-H, H), len: rand(8, 16) });
+    amb.vsp = []; for (let i = 0; i < CONFIG.ambient.void.sparkles.count; i++) amb.vsp.push({ x: rand(0, W), y: rand(50, GROUND_Y - 10), ph: rand(0, TAU), k: rand(0.6, 1.3) });
+    amb.vmist = []; for (let i = 0; i < CONFIG.ambient.void.mist.count; i++) amb.vmist.push({ x: rand(0, W), y: rand(120, GROUND_Y - 20), rx: rand(50, 100), ry: rand(14, 26), v: rand(0.5, 1.5), c: i });
     for (let i = 0; i < CONFIG.ambient.space.stars.count; i++) amb.stars.push({ x: rand(0, W), y: rand(0, GROUND_Y - 40), ph: rand(0, 4), k: rand(0.6, 1.2) });
   }
   function perchBird(b, x) { return Object.assign(b, { x, y: CONFIG.ambient.church.birds.roofY + rand(-6, 6), state: 'perch', t: 0, alpha: 1, mirror: Math.random() < 0.3 }); }
@@ -1917,6 +2209,11 @@ window.ScoreService = ScoreService;
     if (vis.includes('city') && ambCfg('city', 'rain')) {
       const R = ambCfg('city', 'rain');
       for (const d of amb.rain) { d.y += R.speed * dt; d.x -= (R.slant + speed * 0.2) * dt; if (d.y > GROUND_Y || d.x < -20) { d.y = rand(-60, 0); d.x = rand(0, W + 120); } }
+    }
+    if (vis.includes('void')) {
+      const Mi = ambCfg('void', 'mist');
+      if (Mi) for (const f of amb.vmist) { f.x -= (speed * 0.2 + Mi.drift * f.v) * dt; if (f.x + f.rx < 0) { f.x = W + f.rx; f.y = rand(120, GROUND_Y - 20); } }
+      if (ambCfg('void', 'sparkles')) for (const p of amb.vsp) { p.x -= speed * 0.08 * dt; if (p.x < -6) { p.x = W + 6; p.y = rand(50, GROUND_Y - 10); } }
     }
     if (vis.includes('space') && ambCfg('space', 'shootingStars')) {
       const S = ambCfg('space', 'shootingStars');
@@ -1957,7 +2254,9 @@ window.ScoreService = ScoreService;
 
   // ---- Art parallax backgrounds (ASSETS.md §7): per-layer state, transition tiles or crossfade ------
   const bgState = {}; // layer -> { cur, base, trans: { from, to, k } | null, fade: { from, t } | null }
-  const artBg = id => !!(sprites.bg[`${id}-far`] && sprites.bg[`${id}-mid`] && sprites.bg[`${id}-near`]);
+  const voidPartsReady = () => { const v = sprites.voidParts; return !!(v && v.need.length && v.need.every(f => v.img[f])); };
+  const voidParts = id => id === A.backgrounds.voidParts.stage && voidPartsReady();
+  const artBg = id => voidParts(id) || !!(sprites.bg[`${id}-far`] && sprites.bg[`${id}-mid`] && sprites.bg[`${id}-near`]);
   const bgFactor = (id, layer) => { const B = A.backgrounds; return ((B.parallaxByStage[id] || {})[layer]) || B.parallax[layer]; };
   function updateBgLayers(dt) {
     const B = A.backgrounds, TW = B.tileWidth, id = stage().id;
@@ -1966,8 +2265,15 @@ window.ScoreService = ScoreService;
       if (!st) st = bgState[layer] = { cur: id, base: game.dist, trans: null, fade: null };
       if (st.cur !== id) {
         const from = st.cur, tile = sprites.bg[`trans-${from}-${id}-${layer}`];
-        if (game.state !== 'playing' || game.cutscene || bgFactor(from, layer) !== bgFactor(id, layer)) {
+        const warping = game.cutscene && game.cutscene.kind === 'warp';
+        if (game.state !== 'playing' || (game.cutscene && !warping) || bgFactor(from, layer) !== bgFactor(id, layer)) {
           Object.assign(st, { cur: id, base: game.dist, trans: null, fade: null }); // QA jump or after the launch: offset 0
+        } else if (warping) { // v0.6: under the thickest mist, swap the on-screen tile for the space->void trans tile (Art §14.3)
+          const k0 = Math.floor(((game.dist - st.base) * bgFactor(id, layer)) / TW);
+          Object.assign(st, { cur: id, trans: tile ? { from, to: id, k: k0 } : null, fade: null });
+          if (!tile) Object.assign(st, { base: game.dist });
+          (game.stats.bgChanges = game.stats.bgChanges || []).push({ layer, from, to: id, mode: tile ? 'warp-tile' : 'warp-cut', hasTile: !!tile });
+          if (!tile && WARP.unloadFromAfterSwap) dropLayer(`${from}-${layer}`, true);
         } else {
           const f = bgFactor(id, layer), off = (game.dist - st.base) * f;
           const kn = Math.floor((off + W) / TW) + 1; // first tile not yet on screen
@@ -2007,15 +2313,27 @@ window.ScoreService = ScoreService;
   // Only the current stage, the next stage and their transition tiles are kept (QA memory note).
   // Far layers and the launch sky are cached at reduced resolution and upscaled on blit.
   const buildQueue = [];
-  let building = null, pumpScheduled = false, frameKeys = new Set(), lastFrameKeys = new Set();
+  let sweepN = 0, building = null, pumpScheduled = false, frameKeys = new Set(), lastFrameKeys = new Set();
   const layerScale = key => (key === 'launchSky' ? CONFIG.render.skyScale : /-far$/.test(key) ? CONFIG.render.farLayerScale : 1);
+  function layerMeta(key) { // v0.6.1: CONFIG backgrounds.layerMeta, else hitboxes.json backgrounds.layerMeta (Art's stage ids)
+    if (key === 'launchSky' || key.startsWith('trans-')) return null;
+    const i = key.lastIndexOf('-'), id = key.slice(0, i), l = key.slice(i + 1), B = A.backgrounds;
+    return ((B.layerMeta || {})[id] || {})[l] || (sprites.bgMeta[(B.artStageIds || {})[id] || id] || {})[l] || null;
+  }
+  function layerGeom(key, img) { // world band [yo, yo + wh] the file covers
+    const m = layerMeta(key);
+    if (!m) return { yo: 0, wh: H };
+    const yo = m.yOffset || 0, nat = img.height * A.backgrounds.tileWidth / img.width;
+    return { yo, wh: m.height != null ? m.height : m.stretch ? H - yo : m.yOffset != null ? nat : H };
+  }
   function layerSrc(key) {
     const sky = key === 'launchSky';
     const img = sky ? sprites.sheets.launchSky && sprites.sheets.launchSky.img : sprites.bg[key];
     if (!img) return null;
-    const ww = sky ? W : A.backgrounds.tileWidth, wh = sky ? sprites.sheets.launchSky.def.h : H;
+    const g = sky ? { yo: 0, wh: sprites.sheets.launchSky.def.h } : layerGeom(key, img);
+    const ww = sky ? W : A.backgrounds.tileWidth, wh = g.wh;
     const [y0, y1] = sky ? [0, wh] : opaqueRows(key, img, wh);
-    return { img, ww, wh, y0, y1 };
+    return { img, ww, wh, y0, y1, yo: g.yo };
   }
   function getLayer(key) { // returns a fresh cache entry, or null (and queues a build)
     const scNow = canvas.height / H, e = layerCache.get(key);
@@ -2054,13 +2372,21 @@ window.ScoreService = ScoreService;
       if (sc !== canvas.height / H) { if (bm.close) bm.close(); buildQueue.push(key); schedulePump(); return; } // resized meanwhile
       const old = layerCache.get(key); if (old && old.img.close) old.img.close();
       layerCache.delete(key);
-      layerCache.set(key, { img: bm, y0: src.y0, dw, dh, sc, bytes: bm.width * bm.height * 4 });
+      layerCache.set(key, { img: bm, y0: src.yo + src.y0, dw, dh, sc, bytes: bm.width * bm.height * 4 });
       game.stats.layerBuilds = (game.stats.layerBuilds || 0) + 1;
       if (DEBUG) (game.stats.buildLog = game.stats.buildLog || []).push([key, Math.round(game.dist), +(performance.now() - t0).toFixed(1)]);
       game.stats.layerBuildMs = Math.max(game.stats.layerBuildMs || 0, performance.now() - t0);
       evictLayers();
       schedulePump();
     });
+  }
+  function dropLayer(key, unload) { // v0.6.1: evict a cached tile now (and optionally release its source image)
+    const e = layerCache.get(key); if (e) { if (e.img.close) e.img.close(); layerCache.delete(key); }
+    const qi = buildQueue.indexOf(key); if (qi >= 0) buildQueue.splice(qi, 1);
+    frameKeys.delete(key); lastFrameKeys.delete(key);
+    if (unload && sprites.bg[key]) { sprites.bgUnloaded[key] = sprites.bg[key].src; sprites.bg[key].src = ''; delete sprites.bg[key]; }
+    (game.stats.dropped = game.stats.dropped || []).push(key);
+    let b = 0; for (const x of layerCache.values()) b += x.bytes; game.stats.cacheMB = b / 1048576;
   }
   function evictLayers() { // keep only what is on screen or about to be
     const keep = new Set([...lastFrameKeys, ...frameKeys, ...prewarmKeys()]);
@@ -2075,9 +2401,13 @@ window.ScoreService = ScoreService;
     ctx.drawImage(e.img, dx, dy, e.dw, e.dh);
     ctx.restore();
   }
+  const warpDeferred = (id, l) => id === WARP.target && (WARP.deferLayers || []).includes(l) && game.warps === 0 && !(game.cutscene && game.cutscene.kind === 'warp' && game.cutscene.switched);
+  function warpPrewarmDue() { return game.warps > 0 || (game.cutscene && game.cutscene.kind === 'warp') || game.score >= WARP.atScore - WARP.prewarmScoreAhead; }
   function prewarmKeys() { // per layer: while it transitions keep from+trans+cur, once settled cur+next+trans (<= 3 per layer)
     const B = A.backgrounds, cur = stage().id, keys = [];
-    const next = STAGES[game.stageIndex + 1], launchNext = next && next.id === CONFIG.stages.loopFrom;
+    let next = STAGES[game.stageIndex + 1];
+    if (next && next.id === WARP.target && !warpPrewarmDue()) next = null; // v0.6: hold the Void tiles until the warp is near
+    const launchNext = next && next.id === LAUNCH_ID;
     for (const l of B.layers) {
       const st = bgState[l];
       keys.push(`${cur}-${l}`);
@@ -2089,20 +2419,77 @@ window.ScoreService = ScoreService;
         if (next) keys.push(`${next.id}-${l}`); // outgoing tile gone (mid ~20 s, far ~60 s to pass a trans tile): prewarm the next stage's tile, still 3 per layer
         continue;
       } else if (st && st.fade) { keys.push(`${st.fade.from}-${l}`); continue; }
-      if (next) { keys.push(`${next.id}-${l}`); if (!launchNext) keys.push(`trans-${cur}-${next.id}-${l}`); }
+      if (next && !warpDeferred(next.id, l)) { keys.push(`${next.id}-${l}`); if (!launchNext) keys.push(`trans-${cur}-${next.id}-${l}`); }
     }
     if (launchNext && B.layers.every(l => keys.includes(`${next.id}-${l}`))) keys.push('launchSky');
     return keys.filter(k => (k === 'launchSky' ? sprites.sheets.launchSky : sprites.bg[k]));
   }
+  let warmQ = null, warmBusy = false; const warmLog = [];
+  function warmVoid() { // v0.6.1 (QA F4): decode + upload the Void images one per idle callback once the warp is near
+    if (!WARP.warmOnIdle || warmBusy || stage().id !== WARP.from || !warpPrewarmDue()) return;
+    if (!warmQ) {
+      const v = sprites.voidParts; warmQ = [];
+      if (sprites.ui.warpMist) warmQ.push(sprites.ui.warpMist);
+      if (v) for (const img of Object.values(v.img)) if (img) warmQ.push(img);
+    }
+    const img = warmQ.shift(); if (!img) return;
+    warmBusy = true;
+    const run = () => {
+      const t0 = performance.now();
+      const done = () => { try { const c = document.createElement('canvas'); c.width = c.height = 1; c.getContext('2d').drawImage(img, 0, 0, 1, 1); } catch (e) { /* ignore */ } if (img === sprites.ui.warpMist && !mistGain) mistGain = mistGains(img); warmLog.push([img.src.split('/').pop(), +(performance.now() - t0).toFixed(1)]); warmBusy = false; };
+      (img.decode ? img.decode() : Promise.resolve()).then(done, done);
+    };
+    if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 250 }); else setTimeout(run, 16);
+  }
   function prewarm() { // queue (never build inline) everything the next stage change will need
+    warmVoid();
     if (game.state === 'loading' || !artBg(stage().id)) return;
     const sc = canvas.height / H;
     for (const k of prewarmKeys()) { const e = layerCache.get(k); if (!(e && e.sc === sc) && building !== k && !buildQueue.includes(k)) buildQueue.push(k); }
     if (buildQueue.length) schedulePump();
+    else if (!building && ++sweepN % CONFIG.render.evictSweepFrames === 0) evictLayers();
     lastFrameKeys = frameKeys; frameKeys = new Set();
+  }
+  function drawVoidSlot(layer, dx, slot, m, cwMax) { // v0.6.1: Art §14.2 parts inside one 720 world-px slot (backing px)
+    const v = sprites.voidParts, sc = m.a, TW = A.backgrounds.tileWidth, y0 = m.f;
+    const X = wx => Math.round(dx + wx * sc), Y = wy => Math.round(y0 + wy * m.d);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = A.backgrounds.voidParts.smoothing;
+    for (const p of v.spec[layer] || []) {
+      if (p.kind === 'gradient') { // doesn't scroll: once per frame, full canvas
+        if (slot !== 0) continue;
+        const g = ctx.createLinearGradient(0, Y(p.y), 0, Y(p.y + p.h)); g.addColorStop(0, p.top); g.addColorStop(1, p.bottom);
+        ctx.fillStyle = g; ctx.fillRect(0, Y(p.y), cwMax, Y(p.y + p.h) - Y(p.y));
+      } else if (p.kind === 'sprites') {
+        if (!A.backgrounds.voidParts.glints) continue;
+        for (const pl of p.placements || []) {
+          const sp = p.sprites[pl.sprite], img = sp && v.img[sp.file]; if (!img) continue;
+          const k = pl.scale || 1, w = sp.size1x[0] * k, h = sp.size1x[1] * k;
+          const x = pl.x - sp.anchor[0] * k, y = pl.y - sp.anchor[1] * k;
+          ctx.drawImage(img, X(x), Y(y), X(x + w) - X(x), Y(y + h) - Y(y));
+        }
+      } else if (p.file && v.img[p.file]) {
+        const img = v.img[p.file], w = p.drawW || p.size1x[0], h = p.drawH || p.size1x[1];
+        const nx = p.repeat === 'xy' || p.repeat === 'x' ? Math.ceil(TW / w) : 1, ny = p.repeat === 'xy' || p.repeat === 'y' ? Math.ceil((p.drawH || 640) / h) : 1;
+        for (let ix = 0; ix < nx; ix++) for (let iy = 0; iy < ny; iy++) {
+          const x = ix * w, y = (p.y || 0) + iy * h;
+          ctx.drawImage(img, X(x), Y(y), X(x + w) - X(x), Y(y + h) - Y(y));
+        }
+      }
+    }
+    ctx.restore();
+    game.stats.voidSlots = (game.stats.voidSlots || 0) + 1;
   }
   function drawArtBackground(id) {
     const B = A.backgrounds, TW = B.tileWidth, m = ctx.getTransform(), sc = m.a, cwMax = canvas.width;
+    const fm = layerMeta(`${id}-far`);
+    if (fm && fm.fill === 'gradient') { // v0.6.1: short far layer over the stage sky
+      const sky = CONFIG.looks[id].sky, gr = ctx.createLinearGradient(0, m.f, 0, m.f + H * m.d);
+      gr.addColorStop(0, sky[0]); gr.addColorStop(1, sky[1]);
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = gr; ctx.fillRect(0, Math.round(m.f), cwMax, Math.round(H * m.d)); ctx.restore();
+    }
+    const warpMist = game.cutscene && game.cutscene.kind === 'warp' && game.cutscene.switched;
+    const parts = voidParts(id);
     for (const layer of B.layers) {
       const st = bgState[layer] && bgState[layer].cur === id ? bgState[layer] : { base: 0, trans: null, fade: null };
       const off = (game.dist - st.base) * bgFactor(id, layer);
@@ -2120,13 +2507,16 @@ window.ScoreService = ScoreService;
         else keyA = `${id}-${layer}`;
         // v0.5 parallax swap: the incoming layer eases up into place while it fades in (no hard cut)
         const slide = keyB ? Math.round(((CONFIG.transitions.swap.slide[layer] || 0) * (1 - a)) * m.d) : 0;
+        if (parts && keyA === `${id}-${layer}` && !keyB) { drawVoidSlot(layer, dx, i, m, cwMax); continue; } // v0.6.1
         for (const [key, al] of keyB ? [[keyA, 1], [keyB, a]] : [[keyA, 1]]) {
           const e = getLayer(key), yOff = key === keyB ? slide : 0;
           if (e) { blit(e, dx, Math.round(m.f + e.y0 * m.d) + yOff, al); continue; }
+          // v0.6.1: a deferred Void layer still building under the warp mist is skipped (hidden by the mist)
+          if (warpMist && id === WARP.target && (WARP.deferLayers || []).includes(layer)) { game.stats.warpSkipped = (game.stats.warpSkipped || 0) + 1; continue; }
           // not cached yet (first frames, or right after a resize): draw straight from the source image
-          const img = sprites.bg[key];
+          const img = sprites.bg[key], g = layerGeom(key, img);
           ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); if (al < 1) ctx.globalAlpha *= al;
-          ctx.drawImage(img, dx, Math.round(m.f) + yOff, tw, Math.round(H * m.d)); ctx.restore();
+          ctx.drawImage(img, dx, Math.round(m.f + g.yo * m.d) + yOff, tw, Math.round(g.wh * m.d)); ctx.restore();
           game.stats.directDraws = (game.stats.directDraws || 0) + 1;
           if (DEBUG) { const d = game.stats.directLog = game.stats.directLog || {}; d[key] = (d[key] || 0) + 1; }
         }
@@ -2202,6 +2592,15 @@ window.ScoreService = ScoreService;
         for (let i = 0; i < 9; i++) { const x = rng() * W, y = 300 + rng() * 200; near.moveTo(x + 5, y); near.arc(x, y, 3 + rng() * 5, 0, TAU); }
         return [far, mid, near];
       },
+      void(rng) { // v0.6 placeholder Nebula Drift: soft mist ovals and cotton-candy cloud banks (ceiling + floor)
+        const far = new Path2D();
+        for (let i = 0; i < 6; i++) { const x = rng() * W, y = 80 + rng() * 360; far.moveTo(x + 60, y); far.ellipse(x, y, 60 + rng() * 40, 26 + rng() * 14, 0, 0, TAU); }
+        const mid = new Path2D();
+        for (let i = 0; i < 40; i++) { const x = rng() * W, y = rng() * (B - 30); mid.moveTo(x + 1.5, y); mid.arc(x, y, 0.8 + rng() * 1.2, 0, TAU); }
+        const near = new Path2D();
+        for (let x = 0; x <= W; x += 36) { near.moveTo(x + 30, 0); near.arc(x, 0, 30 + ((x * 7) % 11), 0, TAU); }
+        return [far, mid, near];
+      },
     };
     let seed = 7;
     for (const st of STAGES) LAYERS[st.id] = (make[st.id] || make.graveyard)(seeded(seed++));
@@ -2230,7 +2629,8 @@ window.ScoreService = ScoreService;
     }
     // celestial
     const mx = W - 78, my = 96;
-    if (look.celestial === 'planet') {
+    if (look.celestial === 'none') { /* the Void: no moon */ }
+    else if (look.celestial === 'planet') {
       ctx.fillStyle = 'rgba(160, 200, 255, 0.18)'; ctx.beginPath(); ctx.arc(mx, my, 50, 0, TAU); ctx.fill();
       ctx.fillStyle = '#9fd3ff'; ctx.beginPath(); ctx.arc(mx, my, 34, 0, TAU); ctx.fill();
       ctx.fillStyle = '#b8f0d2'; ctx.beginPath(); ctx.ellipse(mx - 8, my - 6, 14, 9, 0.4, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(mx + 12, my + 12, 9, 6, -0.3, 0, TAU); ctx.fill();
@@ -2247,6 +2647,7 @@ window.ScoreService = ScoreService;
       const path = LAYERS[id][i];
       ctx.fillStyle = look.layers[i];
       if (id === 'space') ctx.globalAlpha = [0.7, 0.35, 0.6][i];
+      if (id === 'void') ctx.globalAlpha = [0.28, 0.8, 0.9][i];
       for (const x of [x0, x0 + W]) { ctx.save(); ctx.translate(x, 0); ctx.fill(path); ctx.restore(); }
       ctx.globalAlpha = 1;
       if (id === 'space' && i === 1) { // ring around the placeholder planet
@@ -2290,6 +2691,12 @@ window.ScoreService = ScoreService;
         if (!drawSheet(name, x, GROUND_Y - 46, 0)) drawBikeShape(x, i % 2);
       }
     }
+    if (id === 'void') {
+      const Mi = ambCfg(id, 'mist'), mc = CONFIG.looks.void.mist;
+      if (Mi) for (const f of amb.vmist) { ctx.globalAlpha = alpha * Mi.alpha; ctx.fillStyle = mc[f.c % mc.length]; ctx.beginPath(); ctx.ellipse(f.x, f.y, f.rx, f.ry, 0, 0, TAU); ctx.fill(); }
+      if (ambCfg(id, 'sparkles')) { ctx.fillStyle = CONFIG.colors.vCream; for (const p of amb.vsp) { ctx.globalAlpha = alpha * (0.25 + 0.75 * Math.max(0, Math.sin(game.time * 2.2 + p.ph))); drawStar5(p.x, p.y, 2.4 * p.k, p.ph); } }
+      ctx.globalAlpha = alpha;
+    }
     if (id === 'space' && ambCfg(id, 'stars')) {
       for (const st of amb.stars) { if (!drawSheet('star', st.x - 8, st.y - 8, game.time, { phase: st.ph })) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(st.x, st.y, 1.2 * st.k, 0, TAU); ctx.fill(); } }
       ctx.strokeStyle = '#fff3b0'; ctx.lineWidth = 2;
@@ -2330,6 +2737,16 @@ window.ScoreService = ScoreService;
   function drawGround(id) {
     frameStages.add(id + ':ground');
     const look = CONFIG.looks[id];
+    if (id === 'void') { // v0.6 (Art §14.2): no solid band; a soft translucent mist floor so the death line still reads
+      const gr = ctx.createLinearGradient(0, GROUND_Y, 0, H);
+      gr.addColorStop(0, 'rgba(243, 234, 255, 0.30)'); gr.addColorStop(1, 'rgba(217, 198, 245, 0.08)');
+      ctx.fillStyle = gr; ctx.fillRect(0, GROUND_Y, W, CONFIG.world.groundHeight);
+      ctx.fillStyle = 'rgba(243, 234, 255, 0.45)';
+      const o2 = (game.dist * 0.5) % 30;
+      for (let x = -o2; x < W + 30; x += 30) { ctx.beginPath(); ctx.arc(x + 15, GROUND_Y + 2, 6, Math.PI, 0); ctx.fill(); }
+      if (!artBg(id)) { ctx.fillStyle = look.cloud; for (let x = -o2 * 2; x < W + 60; x += 44) { ctx.beginPath(); ctx.arc(x, H - 6, 34, 0, TAU); ctx.fill(); } }
+      return;
+    }
     ctx.fillStyle = look.ground; ctx.fillRect(0, GROUND_Y, W, CONFIG.world.groundHeight);
     ctx.fillStyle = look.groundTop; ctx.fillRect(0, GROUND_Y, W, 8);
     const off = game.dist % 40;
@@ -2426,6 +2843,25 @@ window.ScoreService = ScoreService;
           ctx.rotate(game.time * 1.5 + h.phase); ctx.fillStyle = c.asteroid; ctx.beginPath();
           for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, rr = r * (0.8 + ((i * 37) % 5) / 20); ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
           ctx.closePath(); ctx.fill(); ctx.fillStyle = c.asteroidShade; ctx.beginPath(); ctx.arc(3, -2, 3, 0, TAU); ctx.fill(); break;
+        case 'void-float-a': // cassette
+          ctx.rotate(Math.sin(game.time * 1.3 + h.phase) * 0.25);
+          ctx.fillStyle = c.vPink; roundRect(-r * 1.2, -r * 0.8, r * 2.4, r * 1.6, 4); ctx.fill();
+          ctx.fillStyle = c.vCream; roundRect(-r * 0.85, -r * 0.5, r * 1.7, r * 0.75, 3); ctx.fill();
+          ctx.fillStyle = c.vInk; ctx.beginPath(); ctx.arc(-r * 0.42, -r * 0.12, 2.6, 0, TAU); ctx.arc(r * 0.42, -r * 0.12, 2.6, 0, TAU); ctx.fill(); break;
+        case 'void-float-b': // alarm clock
+          ctx.fillStyle = c.vPink; ctx.beginPath(); ctx.arc(-r * 0.62, -r * 0.78, r * 0.38, 0, TAU); ctx.arc(r * 0.62, -r * 0.78, r * 0.38, 0, TAU); ctx.fill();
+          ctx.fillStyle = c.vCream; ctx.strokeStyle = c.vLilac; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = c.vInk; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -r * 0.6); ctx.moveTo(0, 0); ctx.lineTo(r * 0.45, 0); ctx.stroke(); break;
+        case 'void-float-c': // rotary phone
+          ctx.fillStyle = c.vMint; roundRect(-r * 1.1, -r * 0.4, r * 2.2, r * 1.3, 5); ctx.fill();
+          ctx.fillStyle = c.vMint; roundRect(-r * 1.25, -r * 0.95, r * 2.5, r * 0.5, 4); ctx.fill();
+          ctx.fillStyle = c.vCream; ctx.beginPath(); ctx.arc(0, r * 0.25, r * 0.5, 0, TAU); ctx.fill();
+          ctx.fillStyle = c.vInk; ctx.beginPath(); ctx.arc(0, r * 0.25, 2, 0, TAU); ctx.fill(); break;
+        case 'void-float-d': // floppy disk
+          ctx.rotate(Math.sin(game.time * 1.1 + h.phase) * 0.2);
+          ctx.fillStyle = c.vBlue; roundRect(-r, -r, r * 2, r * 2, 3); ctx.fill();
+          ctx.fillStyle = c.vCream; ctx.fillRect(-r * 0.55, -r, r * 1.1, r * 0.7); ctx.fillStyle = c.vInk; ctx.fillRect(r * 0.15, -r * 0.9, r * 0.25, r * 0.5);
+          ctx.fillStyle = c.vCream; ctx.fillRect(-r * 0.7, r * 0.1, r * 1.4, r * 0.8); break;
         case 'alien':
           ctx.fillStyle = c.alien; ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.9, 0, 0, TAU); ctx.fill();
           ctx.strokeStyle = c.alien; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-5, -r + 2); ctx.lineTo(-8, -r - 6); ctx.moveTo(5, -r + 2); ctx.lineTo(8, -r - 6); ctx.stroke();
@@ -2503,7 +2939,7 @@ window.ScoreService = ScoreService;
     if (ev.phase === 'warning') {
       const lane = handler.lane(ev);
       const on = Math.floor(ev.t * 8) % 2 === 0;
-      if (!drawSheet('warning', W - 46, lane.y - 20, ev.t)) {
+      if (!drawSheet((ev.def.warningSheet && sprites.sheets[ev.def.warningSheet]) ? ev.def.warningSheet : 'warning', W - 46, lane.y - 20, ev.t)) {
         if (on) { ctx.fillStyle = CONFIG.colors.warning; ctx.beginPath(); ctx.moveTo(W - 26, lane.y - 20); ctx.lineTo(W - 6, lane.y + 16); ctx.lineTo(W - 46, lane.y + 16); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#2b1d3d'; ctx.fillRect(W - 28, lane.y - 8, 4, 14); ctx.fillRect(W - 28, lane.y + 9, 4, 4); }
       }
       text(lane.label, W - 100, lane.y - 34, 18, { color: CONFIG.colors.warning });
@@ -2529,6 +2965,26 @@ window.ScoreService = ScoreService;
         }
       }
     }
+    if (ev.phase === 'active' && ev.id === 'invaderWave') { // v0.6: lane telegraph + pixel invaders (Art sprite if it lands)
+      const h = EVENTS.invaderWave, d = ev.def;
+      ev.data.lanes.forEach((ly, w) => {
+        if (ev.t > d.waveCrossAt[w]) return;
+        const a = 0.25 + 0.2 * Math.sin(ev.t * 10);
+        ctx.fillStyle = `rgba(174, 227, 198, ${a})`; roundRect(W - 14, ly - d.laneHeight / 2 + 6, 8, d.laneHeight - 12, 4); ctx.fill();
+      });
+      const frame = Math.floor(ev.t * 4) % 2;
+      for (const m of ev.data.inv) {
+        if (m.gone) continue;
+        const p = h.pos(ev, m), row = ev.data.rows[m.wave] || 0, key = d.rowSheets[row], sh = sprites.sheets[key];
+        if (p.x > W + 40) continue;
+        if (sh) { const j = sh.json; drawSheet(key, p.x - (j.cx != null ? j.cx : 20), p.y - (j.cy != null ? j.cy : 20), ev.t, { phase: m.wave * 0.125 }); continue; }
+        drawInvader(p.x, p.y, m.r, frame, d.rowColors[row]);
+      }
+      for (const q of ev.data.pops) {
+        const f = Math.min(5, Math.floor(q.t * 12));
+        if (!drawSheet('invaderPop', q.x - 32, q.y - 32, 0, { frame: f })) { ctx.globalAlpha = 1 - q.t / d.popSeconds; ctx.fillStyle = CONFIG.colors.sparkle; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; ctx.fillRect(q.x + Math.cos(a) * 30 * q.t / d.popSeconds - 2, q.y + Math.sin(a) * 30 * q.t / d.popSeconds - 2, 4, 4); } ctx.globalAlpha = 1; }
+      }
+    }
     if (ev.phase === 'active' && ev.id === 'hearse') {
       const d = ev.data, top = GROUND_Y - d.h;
       if (d.sprite) { drawSheet('hearse', d.x, top, ev.t); return; }
@@ -2537,6 +2993,16 @@ window.ScoreService = ScoreService;
       ctx.fillStyle = c.hearseTrim; ctx.fillRect(d.x + 40, top + 12, 40, 16); ctx.fillRect(d.x + 88, top + 12, 50, 16); ctx.fillRect(d.x + 4, top + 34, d.w - 6, 4);
       ctx.fillStyle = '#1b1528'; for (const wx of [d.x + 30, d.x + d.w - 30]) { ctx.beginPath(); ctx.arc(wx, GROUND_Y - 8, 11, 0, TAU); ctx.fill(); }
     }
+  }
+  const INVADER = ['00100000100', '00010001000', '00111111100', '01101110110', '11111111111', '10111111101', '10100000101', '00011011000'];
+  const INVADER_B = ['00100000100', '10010001001', '10111111101', '11101110111', '11111111111', '01111111110', '00100000100', '01000000010'];
+  const invaderPaths = [INVADER, INVADER_B].map(rows => { const p = new Path2D(); rows.forEach((r, y) => [...r].forEach((b, x) => { if (b === '1') p.rect(x, y, 1, 1); })); return p; });
+  function drawInvader(x, y, r, frame, color) { // 11x8 pixel invader scaled to the hitbox diameter (placeholder)
+    const k = (r * 2) / 11;
+    ctx.save(); ctx.translate(x - 5.5 * k, y - 4 * k); ctx.scale(k, k);
+    ctx.fillStyle = color || CONFIG.colors.invader; ctx.fill(invaderPaths[frame]);
+    ctx.fillStyle = CONFIG.colors.invaderEye; ctx.fillRect(3, 3, 1, 1); ctx.fillRect(7, 3, 1, 1);
+    ctx.restore();
   }
   function drawFloatGlows() { // space has no ground art: soft glow under the floating tomb-a
     if (stage().id !== 'space') return;
@@ -2612,6 +3078,92 @@ window.ScoreService = ScoreService;
       }
     }
     ctx.restore();
+    drawParticles();
+    drawGhost();
+    drawFloatTexts();
+    drawHUD();
+  }
+  // v0.6 warp: space -> The Void. Stars stretch into streaks, then Art's mist overlay plays once (the bg layers
+  // switch to the void trans tiles under the thickest frame); placeholder mist puffs if the strip is missing.
+  let mistBuf = null, mistGain = null;
+  function mistGains(img) { // v0.6.1: per-frame gain so mean mist luminance (alpha x luma) follows a smoothed curve
+    const M = WARP.mist, n = M.frames, g = new Array(n).fill(1);
+    if (!M.normalise) return g;
+    try {
+      const sw = 24, sh = 42, c = document.createElement('canvas'); c.width = sw * n; c.height = sh;
+      const x = c.getContext('2d'); x.drawImage(img, 0, 0, sw * n, sh);
+      const d = x.getImageData(0, 0, sw * n, sh).data, L = new Array(n).fill(0);
+      for (let y = 0; y < sh; y++) for (let i = 0; i < sw * n; i++) { const o = (y * sw * n + i) * 4; L[Math.floor(i / sw)] += d[o + 3] / 255 * (0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2]); }
+      for (let f = 0; f < n; f++) L[f] /= sw * sh;
+      for (let f = 0; f < n; f++) { const sm = (L[Math.max(0, f - 1)] + 2 * L[f] + L[Math.min(n - 1, f + 1)]) / 4; g[f] = L[f] > 1 ? Math.min(1, sm / L[f]) : 1; }
+      game.stats.mistLum = L.map(v => +v.toFixed(1)); game.stats.mistGain = g.map(v => +v.toFixed(3));
+    } catch (e) { /* tainted: no normalisation */ }
+    return g;
+  }
+  function drawMistBlend(img, phi, veilA) { // crossfade frame f -> f+1 (premultiplied: copy + lighter), then one upscaled blit
+    const M = WARP.mist, n = M.frames, fw = img.width / n, fh = img.height;
+    if (!mistGain) mistGain = mistGains(img);
+    if (!mistBuf && M.crossfade !== 'direct') { mistBuf = document.createElement('canvas'); mistBuf.width = fw; mistBuf.height = fh; }
+    const f = Math.min(n - 1, Math.floor(phi)), p = clamp(phi - f, 0, 1);
+    if (M.crossfade === 'direct') { // two alpha blits straight onto the frame (no offscreen pass)
+      const a0 = ctx.globalAlpha;
+      ctx.globalAlpha = a0 * (1 - p) * mistGain[f]; ctx.drawImage(img, f * fw, 0, fw, fh, 0, 0, W, H);
+      if (f + 1 < n && p > 0) { ctx.globalAlpha = a0 * p * mistGain[f + 1]; ctx.drawImage(img, (f + 1) * fw, 0, fw, fh, 0, 0, W, H); }
+      ctx.globalAlpha = a0; return;
+    }
+    const b = mistBuf.getContext('2d');
+    b.globalCompositeOperation = 'copy'; b.globalAlpha = (1 - p) * mistGain[f]; b.drawImage(img, f * fw, 0, fw, fh, 0, 0, fw, fh);
+    if (f + 1 < n && p > 0) { b.globalCompositeOperation = 'lighter'; b.globalAlpha = p * mistGain[f + 1]; b.drawImage(img, (f + 1) * fw, 0, fw, fh, 0, 0, fw, fh); }
+    b.globalCompositeOperation = 'source-over';
+    if (veilA > 0) { b.globalAlpha = veilA; b.fillStyle = CONFIG.colors.vLilac; b.fillRect(0, 0, fw, fh); } // veil in the small buffer: no extra full-screen pass
+    b.globalAlpha = 1;
+    ctx.drawImage(mistBuf, 0, 0, W, H);
+  }
+  function drawWarpScene() {
+    const c = game.cutscene, T = WARP.timeline, M = WARP.mist, s = warpS(c), cur = stage().id;
+    drawStageBackground(cur); drawAmbientBack(cur, 1);
+    const k = clamp((s - T.streak[0]) / (T.streak[1] - T.streak[0]), 0, 1);
+    if (!c.switched && k > 0) {
+      const e = easeIn(k), pal = CONFIG.looks[WARP.target].mist;
+      ctx.lineCap = 'round';
+      c.streaks.forEach((p, i) => {
+        const len = 2 + WARP.streakLength * e * p.k, x = ((p.x - 700 * e * e * p.k) % (W + len) + W + len) % (W + len) - len;
+        ctx.globalAlpha = 0.85 * (1 - 0.5 * e); ctx.strokeStyle = e > 0.4 ? pal[i % pal.length] : '#fdf6ff'; ctx.lineWidth = 1.5 + 3 * e;
+        ctx.beginPath(); ctx.moveTo(x, p.y); ctx.lineTo(x + len, p.y); ctx.stroke();
+      });
+      ctx.lineCap = 'butt'; ctx.globalAlpha = 0.22 * e; ctx.fillStyle = CONFIG.colors.vLilac; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+    }
+    drawGround(cur);
+    // v0.6.1 (QA F1): the outgoing backdrop, snapshotted on the frames just before the cut, fades out over the new one
+    const swapAt = T.mistStart + M.switchFrame / M.fps;
+    if (M.swapFadeSeconds > 0) {
+      if (!c.switched && s >= swapAt - 0.05) {
+        if (!c.snap) { c.snap = document.createElement('canvas'); c.snap.width = canvas.width; c.snap.height = canvas.height; }
+        const sx = c.snap.getContext('2d'); sx.globalCompositeOperation = 'copy'; sx.drawImage(canvas, 0, 0); sx.globalCompositeOperation = 'source-over';
+      } else if (c.switched && c.snap) {
+        const a = 1 - (s - (c.switchS || swapAt)) / M.swapFadeSeconds;
+        if (a > 0 && c.snap.width === canvas.width && c.snap.height === canvas.height) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = a; ctx.drawImage(c.snap, 0, 0); ctx.restore(); }
+        else { c.snap.width = c.snap.height = 0; c.snap = null; }
+      }
+    }
+    const mt = s - T.mistStart, f = Math.floor(mt * M.fps);
+    let veilDone = false;
+    if (mt >= 0 && f < M.frames) {
+      const img = sprites.ui.warpMist;
+      const vd = Math.abs(s - swapAt), veilA = M.veil && M.veil.peak > 0 ? Math.max(0, M.veil.peak * (1 - vd / M.veil.halfWidth)) : 0;
+      if (img && M.crossfade) { drawMistBlend(img, mt * M.fps, veilA); veilDone = true; }
+      else if (img) { const fw = img.width / M.frames; ctx.drawImage(img, f * fw, 0, fw, img.height, 0, 0, W, H); }
+      else { // placeholder: pastel puffs thicken to frame 3, then thin
+        const a = f <= M.switchFrame ? (f + 1) / (M.switchFrame + 1) : (M.frames - f) / (M.frames - M.switchFrame), pal = CONFIG.looks[WARP.target].mist;
+        for (const b of c.blobs) { ctx.globalAlpha = 0.55 * a; ctx.fillStyle = pal[b.c % pal.length]; ctx.beginPath(); ctx.ellipse(b.x - mt * 120 * b.v, b.y, b.r, b.r * 0.6, 0, 0, TAU); ctx.fill(); }
+        ctx.globalAlpha = 1;
+      }
+      game.stats.warpMistFrame = f;
+    }
+    if (!veilDone && M.veil && M.veil.peak > 0) { // v0.6.1 (QA F1): soften the background cut (fallback path; normally folded into the mist buffer)
+      const d = Math.abs(s - swapAt), a = M.veil.peak * (1 - d / M.veil.halfWidth);
+      if (a > 0) { ctx.globalAlpha = a; ctx.fillStyle = CONFIG.colors.vLilac; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+    }
     drawParticles();
     drawGhost();
     drawFloatTexts();
@@ -2799,8 +3351,9 @@ window.ScoreService = ScoreService;
   }
 
   // ---- HUD -----------------------------------------------------------------------------------
+  const hudFont = (weight) => px => `${weight} ${px}px ${CONFIG.ui.font}`;
   function text(str, x, y, size, opts = {}) {
-    ctx.font = `${opts.weight || 'bold'} ${size}px ${CONFIG.ui.font}`;
+    ctx.font = hudFont(opts.weight || 'bold')(size);
     ctx.textAlign = opts.align || 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     ctx.lineWidth = Math.max(3, size / 6); ctx.strokeStyle = CONFIG.colors.textShadow; ctx.strokeText(str, x, y);
     ctx.fillStyle = opts.color || CONFIG.colors.text; ctx.fillText(str, x, y);
@@ -2824,7 +3377,13 @@ window.ScoreService = ScoreService;
       if (game.stageIndex > 0) text(CONFIG.looks[stage().id].name, W / 2, 230, 20, { color: CONFIG.colors.accent });
       if (game.golden) text('Golden ghost! x2 points', W / 2, 196, 18, { color: CONFIG.colors.ghostGolden });
       ctx.globalAlpha = blink; text('Tap to start', W / 2, H / 2 + 50, 26); ctx.globalAlpha = 1;
-      text(`${game.player}  ·  Best: ${game.best}`, W / 2, H - CONFIG.world.groundHeight / 2, 20);
+      { // v0.6.2: ' · Best: N' always shows in full; the name shrinks then ellipsizes
+        const R = CONFIG.ui.nameFit.ready, suffix = `  ·  Best: ${game.best}`, f = hudFont('bold'), maxW = Math.min(R.maxWidth, W) - R.pad * 2;
+        const fit = fitName(ctx, game.player, px => { const keep = ctx.font; ctx.font = f(px); const sw = ctx.measureText(suffix).width; ctx.font = keep; return sw; }, maxW, R.size, R.minSize, R.step, f);
+        const line = fit.text + suffix; ctx.font = f(fit.size);
+        game.stats.nameDraw = { where: 'ready', line, name: fit.text, suffix, size: fit.size, truncated: fit.truncated, kept: fit.kept, width: ctx.measureText(line).width, maxWidth: maxW, canvasW: W };
+        text(line, W / 2, H - CONFIG.world.groundHeight / 2, fit.size);
+      }
       return;
     }
     if (game.state === 'playing') {
@@ -2837,7 +3396,12 @@ window.ScoreService = ScoreService;
         ctx.globalAlpha = 1;
       }
       text(`Best ${game.best}`, W - 12, 22, 14, { align: 'right', weight: 'normal' });
-      text(game.player, 12, 22, 14, { align: 'left', weight: 'normal' });
+      { // v0.6.2: name never runs into 'Best N'
+        const Hc = CONFIG.ui.nameFit.hud, f = hudFont('normal'); ctx.font = f(14); const bw = ctx.measureText(`Best ${game.best}`).width;
+        const maxW = W - 24 - bw - Hc.gap, fit = fitName(ctx, game.player, () => 0, maxW, Hc.size, Hc.minSize, Hc.step, f);
+        game.stats.nameDrawHud = { name: fit.text, size: fit.size, truncated: fit.truncated, width: ctx.measureText(fit.text).width, maxWidth: maxW };
+        text(fit.text, 12, 22, fit.size, { align: 'left', weight: 'normal' });
+      }
       drawSpecialHud();
       if (game.banner) drawBanner();
       if (game.paused) { ctx.fillStyle = CONFIG.colors.panelBg; ctx.fillRect(0, 0, W, H); text('Paused', W / 2, H / 2 - 20, 36); text('Tap to resume', W / 2, H / 2 + 24, 20); }
@@ -2850,7 +3414,11 @@ window.ScoreService = ScoreService;
     ctx.fillStyle = CONFIG.colors.panelBg; roundRect(px, py, pw, ph, 22); ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = CONFIG.colors.accent; ctx.stroke();
     text('Game Over', W / 2, py + 40, 34);
-    text(game.player, W / 2, py + 80, 18, { color: CONFIG.colors.accent });
+    { // v0.6.2: name fits inside the panel
+      const G = CONFIG.ui.nameFit.gameOver, f = hudFont('bold'), maxW = pw - G.pad * 2, fit = fitName(ctx, game.player, () => 0, maxW, G.size, G.minSize, G.step, f);
+      game.stats.nameDrawOver = { name: fit.text, size: fit.size, truncated: fit.truncated, width: ctx.measureText(fit.text).width, maxWidth: maxW };
+      text(fit.text, W / 2, py + 80, fit.size, { color: CONFIG.colors.accent });
+    }
     text(`Score: ${game.score}`, W / 2, py + 116, 26);
     text(`Best: ${game.best}`, W / 2, py + 152, 22);
     let y = py + 186;
@@ -2975,7 +3543,7 @@ window.ScoreService = ScoreService;
     const cur = stage().id;
     const from = game.fade ? STAGES[game.fade.from].id : null;
     const t = game.fade ? easeInOut(Math.min(1, game.fade.t)) : 1;
-    if (game.cutscene) { drawLaunchScene(); return; }
+    if (game.cutscene) { if (game.cutscene.kind === 'warp') drawWarpScene(); else drawLaunchScene(); return; }
     if (artBg(cur) && A.backgrounds.layers.some(l => bgState[l] && bgState[l].cur !== cur)) updateBgLayers(0); // QA TR-FLASH: stage switched after this tick's layer update; set up the tile/fade now, not one frame late
     drawStageBackground(cur);
     drawAmbientBack(cur, t);
@@ -3010,13 +3578,14 @@ window.ScoreService = ScoreService;
   game.setStage = n => {
     const idx = parseStage(n);
     if (idx == null) return false;
-    game.pairs = STAGES[idx].startAt;
-    if (game.state !== 'playing') { game.stageIndex = idx; game.fade = null; scheduleZoneEvent(); }
+    game.pairs = stageStartPairs(idx);
+    if (game.state !== 'playing') { game.stageIndex = idx; game.fade = null; if (STAGES[idx].id === WARP.target) { game.launches = 1; game.warps = 1; game.voidBasePairs = game.pairs; } scheduleZoneEvent(); }
     return true; // while playing, the normal transition (or the launch) follows from pairs
   };
   game.triggerEvent = id => {
     const zone = Object.keys(CONFIG.events.list).find(z => CONFIG.events.list[z].id === id);
     if (id === 'rocket') { game.pairs = Math.max(game.pairs, CONFIG.launch.atScore); return true; }
+    if (id === 'warp') { game.score = Math.max(game.score, WARP.atScore); return true; }
     if (!zone) return false;
     game.eventDue = { zone, score: game.pairs, def: CONFIG.events.list[zone], forced: true };
     return true;
@@ -3037,7 +3606,7 @@ window.ScoreService = ScoreService;
   game.dieAs = (cause, obj) => { if (game.state !== 'playing') return false; const god = game.god; game.god = false; die(cause, obj); game.god = god; return game.state; };
   game.worldNow = () => worldNow();
   game.ui = { openProfiles: () => openProfiles(), openTop: () => openTop(), close: () => closeUi() };
-  game._dbg = { nextReady: () => { const n = STAGES[game.stageIndex + 1]; if (!n) return true; const sc = canvas.height / H; return prewarmKeys().filter(k => k.includes(n.id) || k === 'launchSky').every(k => { const e = layerCache.get(k); return e && e.sc === sc; }) && A.backgrounds.layers.every(l => prewarmKeys().includes(`${n.id}-${l}`)); }, bgSettled: () => A.backgrounds.layers.every(l => { const st = bgState[l]; return st && st.cur === stage().id && !st.trans && !st.fade; }), prewarmReady: () => !building && !buildQueue.length && prewarmKeys().every(k => { const e = layerCache.get(k); return e && e.sc === canvas.height / H; }), hbFallbacks, coverageBreaks, hitsShapes, resolveColumn, stageIndexForPairs, pairHits, columnHitboxes, multiplier, physics, hazardY, speedFor, gapFor, spacingFor, EVENTS, currentSpeed, transitionActive, patternRunning, hitbox: () => ({ r: hitboxRadius, off: hitboxOffsetY }), getLayer, layerCache };
+  game._dbg = { nextReady: () => { const n = STAGES[game.stageIndex + 1]; if (!n || !artBg(n.id) || voidParts(n.id) || (n.id === WARP.target && !warpPrewarmDue())) return true; const sc = canvas.height / H; return prewarmKeys().filter(k => k.includes(n.id) || k === 'launchSky').every(k => { const e = layerCache.get(k); return e && e.sc === sc; }) && A.backgrounds.layers.every(l => warpDeferred(n.id, l) || prewarmKeys().includes(`${n.id}-${l}`)); }, bgSettled: () => A.backgrounds.layers.every(l => { const st = bgState[l]; return st && st.cur === stage().id && !st.trans && !st.fade; }), prewarmReady: () => !building && !buildQueue.length && prewarmKeys().every(k => { const e = layerCache.get(k); return e && e.sc === canvas.height / H; }), hbFallbacks, coverageBreaks, hitsShapes, resolveColumn, stageIndexForPairs, pairHits, columnHitboxes, multiplier, physics, hazardY, speedFor, gapFor, spacingFor, EVENTS, currentSpeed, specialCfg, stageGap, stageSpacing, stageStartPairs, transitionActive, patternRunning, hitbox: () => ({ r: hitboxRadius, off: hitboxOffsetY }), getLayer, layerCache, layerMeta, layerGeom, voidPartsReady, objectOf, clipGraphemes, warmLog, spawnPairForTest: () => { const n = game.cols.length; spawnPair(W + 100, { centre: H / 2, pattern: 'random' }); return n < game.cols.length ? game.cols.splice(n, 1)[0] : null; }, voidPartsMB: () => (sprites.voidParts ? +sprites.voidParts.mb.toFixed(2) : 0), mistMB: () => { const i = sprites.ui.warpMist; return i ? +(i.naturalWidth * i.naturalHeight * 4 / 1048576).toFixed(2) : 0; } };
   }
 
   // ---- v0.5 'Who's playing?' + top-10 (small DOM overlay, mobile-friendly) ----------------------
@@ -3051,8 +3620,8 @@ window.ScoreService = ScoreService;
     st.textContent = `.gg-ui{font-family:${CONFIG.ui.font};color:#fff;-webkit-user-select:none;user-select:none;touch-action:manipulation}
 .gg-bar{position:fixed;display:none;gap:10px;justify-content:center;transform:translate(-50%,-50%);z-index:5}
 .gg-btn{font:inherit;font-weight:bold;font-size:16px;color:#fff;background:${C.bannerBg};border:2px solid ${C.bannerEdge};border-radius:22px;padding:9px 16px;min-height:44px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
-.gg-btn{display:inline-flex;align-items:center;gap:6px}.gg-ic{width:26px;height:26px;flex:none;pointer-events:none}
-.gg-item span{display:inline-flex;align-items:center;gap:8px}
+.gg-btn{display:inline-flex;align-items:center;gap:6px}.gg-item>span.gg-who{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto}.gg-item small{flex:none}span.gg-nm{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gg-top td.nm{max-width:0;width:100%}.gg-top td.s{white-space:nowrap;line-height:1.25;font-size:${CONFIG.ui.nameFit.list.topStagePx}px !important}.gg-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gg-ic{width:26px;height:26px;flex:none;pointer-events:none}
+.gg-item span:not(.gg-nm){display:inline-flex;align-items:center;gap:8px}
 .gg-btn:active{transform:scale(.96)}
 .gg-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,6,20,.55);z-index:10}
 .gg-panel{width:min(86vw,330px);max-height:80vh;overflow:auto;background:${C.panelBg.replace('0.72', '0.96')};border:3px solid ${C.accent};border-radius:22px;padding:16px 16px 14px;box-sizing:border-box}
@@ -3092,6 +3661,18 @@ window.ScoreService = ScoreService;
   function closeUi() { ui.open = null; ui.modal.style.display = 'none'; ui.panel.textContent = ''; }
   function setPlayer() { game.player = ScoreService.getCurrentProfile().name; if (game.state !== 'over') game.best = ScoreService.getBest(); }
   SS.onProfileChange(setPlayer); // QA PR-SYNC: API add/selectProfile refresh the HUD player at once
+  // v0.6.3 (QA N2): name spans in lists show the full name in title/aria-label and are trimmed by grapheme + '…' to their laid-out width
+  function nameSpan(name) { const sp = el('span', 'gg-nm', name); sp.dataset.full = name; sp.title = name; sp.setAttribute('aria-label', name); return sp; }
+  function fitNameSpans() {
+    const mc = (ui.measure = ui.measure || document.createElement('canvas').getContext('2d'));
+    for (const sp of ui.panel.querySelectorAll('span.gg-nm')) {
+      const full = sp.dataset.full; sp.textContent = full; const avail = sp.clientWidth;
+      if (!avail || sp.scrollWidth <= avail) { sp.dataset.truncated = '0'; continue; }
+      const cs = getComputedStyle(sp), f = () => `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const fit = fitName(mc, full, () => 0, avail - 1, 1, 1, 1, f);
+      sp.textContent = fit.text; sp.dataset.truncated = fit.truncated ? '1' : '0';
+    }
+  }
   function openProfiles(msg) {
     ui.open = 'profiles'; ui.panel.textContent = '';
     ui.panel.appendChild(el('h2', null, "Who's playing?"));
@@ -3099,13 +3680,17 @@ window.ScoreService = ScoreService;
     const cur = ScoreService.getCurrentProfile().id;
     for (const pr of ScoreService.getProfiles()) {
       const b = el('button', 'gg-item' + (pr.id === cur ? ' cur' : '')); b.type = 'button'; b.dataset.id = pr.id;
-      const nm = el('span'); nm.append(icon('chip', chipColor(pr.id)), el('span', null, pr.name));
+      const nm = el('span', 'gg-who'); nm.append(icon('chip', chipColor(pr.id)), nameSpan(pr.name)); b.title = pr.name; b.setAttribute('aria-label', `${pr.name}, best ${pr.best}`);
       b.append(nm, el('small', null, `Best ${pr.best}`));
       b.addEventListener('click', () => { ScoreService.selectProfile(pr.id); setPlayer(); closeUi(); });
       list.appendChild(b);
     }
     const add = el('div', 'gg-add'), inp = el('input'), go = el('button', 'gg-btn'); go.append(icon('add'), el('span', null, 'Add'));
-    inp.id = 'gg-name'; inp.placeholder = 'New player'; inp.maxLength = CONFIG.scoring.maxNameLength; inp.autocomplete = 'off'; inp.enterKeyHint = 'done';
+    inp.id = 'gg-name'; inp.placeholder = 'New player'; inp.autocomplete = 'off'; inp.enterKeyHint = 'done';
+    // v0.6.1 (QA F2): no maxlength (it counts UTF-16 units); clip to maxNameLength graphemes on input/paste instead
+    const clipInput = () => { const v = clipGraphemes(inp.value, CONFIG.scoring.maxNameLength); if (v !== inp.value) { inp.value = v; try { inp.setSelectionRange(v.length, v.length); } catch (e) { /* not focusable */ } } };
+    inp.addEventListener('input', e => { if (!e.isComposing) clipInput(); });
+    inp.addEventListener('compositionend', clipInput);
     go.id = 'gg-add'; go.type = 'button';
     const err = el('div', 'gg-err', msg || ''); err.id = 'gg-err';
     const submit = () => {
@@ -3118,7 +3703,7 @@ window.ScoreService = ScoreService;
     add.append(inp, go);
     const close = el('button', 'gg-btn gg-close', 'Close'); close.type = 'button'; close.addEventListener('click', closeUi);
     ui.panel.append(list, add, err, close);
-    ui.modal.style.display = 'flex';
+    ui.modal.style.display = 'flex'; fitNameSpans();
   }
   function openTop() {
     ui.open = 'top'; ui.panel.textContent = '';
@@ -3129,14 +3714,16 @@ window.ScoreService = ScoreService;
       const tb = el('table', 'gg-top'); tb.id = 'gg-topscores';
       rows.forEach((r, i) => {
         const tr = el('tr'), look = CONFIG.looks[r.stage];
-        tr.append(el('td', 'n', `${i + 1}.`), el('td', null, r.name), el('td', 'n', String(r.score)), el('td', 's', `${look ? look.name : r.stage}${r.date ? ' · ' + r.date.slice(5) : ''}`));
+        const nm = el('td', 'nm'); nm.title = r.name; nm.append(nameSpan(r.name));
+        const st = el('td', 's'); st.append(document.createTextNode(look ? look.name : r.stage)); if (r.date) { st.append(el('br'), document.createTextNode(`${r.date.slice(8, 10)}/${r.date.slice(5, 7)}`)); } // v0.6.3: 2 lines max
+        tr.append(el('td', 'n', `${i + 1}.`), nm, el('td', 'n', String(r.score)), st);
         tb.appendChild(tr);
       });
       ui.panel.appendChild(tb);
     }
     const close = el('button', 'gg-btn gg-close', 'Close'); close.type = 'button'; close.addEventListener('click', closeUi);
     ui.panel.appendChild(close);
-    ui.modal.style.display = 'flex';
+    ui.modal.style.display = 'flex'; fitNameSpans();
   }
   function syncUi() { // show the buttons on the start screen and (after the anim) on game over
     const mode = game.state === 'ready' && !game.paused ? 'ready' : game.state === 'over' && !deathPlaying() ? 'over' : null;
@@ -3155,7 +3742,13 @@ window.ScoreService = ScoreService;
       if (pos !== ui.pos) { ui.pos = pos; ui.bar.style.left = pos.split('|')[0]; ui.bar.style.top = pos.split('|')[1]; }
       if (ui.playerLabel !== game.player) {
         ui.playerLabel = game.player; ui.playerBtn.textContent = '';
-        ui.playerBtn.append(icon('chip', chipColor(ScoreService.getCurrentProfile().id)), el('span', null, game.player));
+        // v0.6.2: measure-and-trim at a grapheme boundary (CSS ellipsis kept as a backstop)
+        const B = CONFIG.ui.nameFit.button, mc = (ui.measure = ui.measure || document.createElement('canvas').getContext('2d'));
+        const f = px => `bold ${px}px ${CONFIG.ui.font}`, avail = B.maxWidth - B.padX * 2 - B.border * 2 - B.iconW - B.gap;
+        const fit = fitName(mc, game.player, () => 0, avail, B.fontSize, B.fontSize, 1, f);
+        const sp = el('span', 'gg-name', fit.text); ui.playerBtn.title = game.player; ui.playerBtn.setAttribute('aria-label', `Player: ${game.player}`);
+        ui.playerBtn.dataset.truncated = fit.truncated ? '1' : '0'; ui.playerBtn.dataset.avail = String(avail);
+        ui.playerBtn.append(icon('chip', chipColor(ScoreService.getCurrentProfile().id)), sp);
       }
     }
   }
@@ -3180,6 +3773,7 @@ window.ScoreService = ScoreService;
     const S = SHC(), f = S.frameStageFile[sid] || sid;
     const tryLoad = suffix => { const src = S.frameFile.replace('{stage}', suffix); if (share.frames.has(src)) return share.frames.get(src);
       const p = new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; }); share.frames.set(src, p); return p; };
+    if ((S.frameGeneric || []).includes(sid)) return tryLoad(''); // v0.6: no Void frame from Art yet
     return tryLoad('-' + f).then(i => i || tryLoad(''));
   }
   function drawnFrame(x, W2, H2, sid) { // pastel fallback when Art's frame is missing
@@ -3288,7 +3882,7 @@ window.ScoreService = ScoreService;
     list.append(copy, save);
     const close = el('button', 'gg-btn gg-close', 'Close'); close.type = 'button'; close.addEventListener('click', closeUi);
     ui.panel.append(list, close);
-    ui.modal.style.display = 'flex';
+    ui.modal.style.display = 'flex'; fitNameSpans();
   }
   buildUi();
   if (DEBUG) game._share = { shareInfo, shareReady, makeCard, prepareCard, doShare, shareLinks, copyText, openShareSheet, state: share };
